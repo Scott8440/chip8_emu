@@ -74,10 +74,130 @@ impl CPU {
             | (self.memory[self.pc as usize + 1] as u16);
 
         match self.opcode & 0xF000 {
+            0x000 => match self.opcode & 0x00FF {
+                0xE0 => {
+                    println!("clear");
+                }
+                0xEE => {
+                    println!("return");
+                }
+                _ => {
+                    println!("Unknown opcode: 0x{:x}", self.opcode);
+                }
+            },
+            0x1000 => {
+                println!("1NNN")
+            }
+            0x2000 => {
+                println!("2NNN")
+            }
+            0x3000 => {
+                println!("3XNN")
+            }
+            0x4000 => {
+                println!("4XNN")
+            }
+            0x5000 => {
+                println!("5XY0")
+            }
+            0x6000 => {
+                println!("6XNN")
+            }
+            0x7000 => {
+                println!("7XNN")
+            }
+            0x8000 => match self.opcode & 0xF {
+                0x0 => {
+                    println!("8XY0")
+                }
+                0x1 => {
+                    println!("8XY1")
+                }
+                0x2 => {
+                    println!("8XY2")
+                }
+                0x3 => {
+                    println!("8XY3")
+                }
+                0x4 => {
+                    println!("8XY4")
+                }
+                0x5 => {
+                    println!("8XY5")
+                }
+                0x6 => {
+                    println!("8XY6")
+                }
+                0x7 => {
+                    println!("8XY7")
+                }
+                0xE => {
+                    println!("8XYE")
+                }
+                _ => {
+                    println!("Unknown opcode: 0x{:x}", self.opcode);
+                }
+            },
+            0x9000 => {
+                println!("9XY0")
+            }
             0xA000 => {
                 // ANNN: Sets I to address NNN
                 println!("ANNN")
             }
+            0xB000 => {
+                println!("BNNN")
+            }
+            0xC000 => {
+                println!("CXNN")
+            }
+            0xD000 => {
+                println!("DXYN")
+            }
+            0xE000 => match self.opcode & 0x00FF {
+                0x9E => {
+                    println!("EX9E")
+                }
+                0xA1 => {
+                    println!("EXA1")
+                }
+                _ => {
+                    println!("Unknown opcode: 0x{:x}", self.opcode);
+                }
+            },
+            0xF000 => match self.opcode & 0x00FF {
+                0x07 => {
+                    println!("FX07")
+                }
+                0x0A => {
+                    println!("FX0A")
+                }
+                0x15 => {
+                    println!("FX15")
+                }
+                0x18 => {
+                    println!("FX18")
+                }
+                0x1E => {
+                    println!("FX1E")
+                }
+                0x29 => {
+                    println!("FX29")
+                }
+                0x33 => {
+                    println!("FX33")
+                }
+                0x55 => {
+                    println!("FX55")
+                }
+                0x65 => {
+                    println!("FX65")
+                }
+                _ => {
+                    println!("Unknown opcode: 0x{:x}", self.opcode);
+                }
+            },
+
             _ => {
                 println!("Unknown opcode: 0x{:x}", self.opcode);
             }
