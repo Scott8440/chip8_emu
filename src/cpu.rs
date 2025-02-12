@@ -5,32 +5,32 @@ const MEMORY_SIZE: usize = 4096;
 
 #[derive(Debug)]
 pub struct CPU {
-    opcode: u16,
+    pub opcode: u16,
 
     // Registers
-    v: [u8; 16],
+    pub v: [u8; 16],
 
     // Timers
     // Both count down at 60 hz
-    delay_timer: u8, // read/write
-    sound_timer: u8, // write only
+    pub delay_timer: u8, // read/write
+    pub sound_timer: u8, // write only
 
     // Memory
-    memory: [u8; MEMORY_SIZE],
+    pub memory: [u8; MEMORY_SIZE],
 
-    i: u16,  // index register. Max = 0xfff
-    pc: u16, // program counter. Max = 0xfff
+    pub i: u16,  // index register. Max = 0xfff
+    pub pc: u16, // program counter. Max = 0xfff
 
     // Display
     // 2048 pixels total, binary state black or white
-    gfx: [u8; 64 * 32],
+    pub gfx: [u8; 64 * 32],
 
     // Stack
-    stack: [u16; 16],
-    sp: u16, // stack pointer
+    pub stack: [u16; 16],
+    pub sp: u16, // stack pointer
 
     // Keybuoard
-    keys: [u8; 16],
+    pub keys: [u8; 16],
 }
 
 impl CPU {
@@ -202,5 +202,54 @@ impl CPU {
                 println!("Unknown opcode: 0x{:x}", self.opcode);
             }
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use pretty_assertions::assert_eq;
+
+    fn setup() -> CPU {
+        let mut cpu = CPU::new();
+        cpu.initialize();
+        cpu
+    }
+
+    #[test]
+    fn test_initialization() {
+        let cpu = setup();
+        assert_eq!(cpu.pc, PROGRAM_START);
+        assert_eq!(cpu.opcode, 0);
+        assert_eq!(cpu.i, 0);
+        assert_eq!(cpu.sp, 0);
+    }
+
+    #[test]
+    fn test_load_program() {
+        let mut cpu = setup();
+        let program = vec![0xA2, 0xB4]; // ANNN instruction
+        cpu.load(program.clone());
+        
+        // Verify program was loaded at correct address
+        assert_eq!(cpu.memory[PROGRAM_START as usize], program[0]);
+        assert_eq!(cpu.memory[PROGRAM_START as usize + 1], program[1]);
+    }
+
+    #[test]
+    fn test_clear_screen() {
+        let mut cpu = setup();
+        // Load CLS instruction (0x00E0)
+        cpu.load(vec![0x00, 0xE0]);
+        
+        // Set some pixels to 1
+        cpu.gfx[0] = 1;
+        cpu.gfx[100] = 1;
+        
+        cpu.cycle();
+        
+        // Verify all pixels are cleared
+        assert!(cpu.gfx.iter().all(|&pixel| pixel == 0));
+        assert_eq!(cpu.pc, PROGRAM_START + 2);
     }
 }
