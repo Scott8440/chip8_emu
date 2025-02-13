@@ -71,11 +71,13 @@ impl CPU {
 
     pub fn cycle(&mut self) {
         // Fetch opcode
+        // TODO: Does opcode need to be a member variable?
         self.opcode = (self.memory[self.pc as usize] as u16) << 8
             | (self.memory[self.pc as usize + 1] as u16);
+        let opcode = self.opcode;
 
-        match self.opcode & 0xF000 {
-            0x0 => match self.opcode & 0x00FF {
+        match opcode & 0xF000 {
+            0x0 => match opcode & 0x00FF {
                 0xE0 => {
                     // Clear the screen
                     self.gfx = [0; 64 * 32];
@@ -85,26 +87,26 @@ impl CPU {
                     println!("return");
                 }
                 _ => {
-                    println!("Unknown opcode: 0x{:x}", self.opcode);
+                    println!("Unknown opcode: 0x{:x}", opcode);
                 }
             },
             0x1000 => {
                 // Jump to address NNN
                 println!("1NNN");
-                self.pc = self.opcode & 0x0FFF;
+                self.pc = opcode & 0x0FFF;
             }
             0x2000 => {
                 // Call subroutine at NNN
                 println!("2NNN");
                 self.stack[self.sp as usize] = self.pc;
                 self.sp += 1;
-                self.pc = self.opcode & 0x0FFF;
+                self.pc = opcode & 0x0FFF;
             }
             0x3000 => {
                 // Skip next instruction if vX == NN
                 println!("3XNN");
                 self.pc += 2;
-                if self.v[(self.opcode & 0x0F00) as usize >> 8] == (self.opcode & 0x00FF) as u8 {
+                if self.v[(opcode & 0x0F00) as usize >> 8] == (opcode & 0x00FF) as u8 {
                     self.pc += 2;
                 }
             }
@@ -112,7 +114,7 @@ impl CPU {
                 // Skip next instruction if vX != NN
                 println!("4XNN");
                 self.pc += 2;
-                if self.v[(self.opcode & 0x0F00) as usize >> 8] != (self.opcode & 0x00FF) as u8 {
+                if self.v[(opcode & 0x0F00) as usize >> 8] != (opcode & 0x00FF) as u8 {
                     self.pc += 2;
                 }
             }
@@ -120,8 +122,8 @@ impl CPU {
                 // Skip next instruction if VX == VY
                 println!("5XY0");
                 self.pc += 2;
-                if self.v[(self.opcode & 0x0F00) as usize >> 8]
-                    == self.v[(self.opcode & 0x00F0) as usize >> 4]
+                if self.v[(opcode & 0x0F00) as usize >> 8]
+                    == self.v[(opcode & 0x00F0) as usize >> 4]
                 {
                     self.pc += 2;
                 }
@@ -129,43 +131,43 @@ impl CPU {
             0x6000 => {
                 // Store NN in vX
                 println!("6XNN");
-                self.v[(self.opcode & 0x0F00) as usize >> 8] = (self.opcode & 0x00FF) as u8;
+                self.v[(opcode & 0x0F00) as usize >> 8] = (opcode & 0x00FF) as u8;
             }
             0x7000 => {
                 println!("7XNN");
-                self.v[(self.opcode & 0x0F00) as usize >> 8] += (self.opcode & 0x00FF) as u8;
+                self.v[(opcode & 0x0F00) as usize >> 8] += (opcode & 0x00FF) as u8;
             }
-            0x8000 => match self.opcode & 0xF {
+            0x8000 => match opcode & 0xF {
                 0x0 => {
                     // Store VY in VX
                     println!("8XY0");
-                    self.v[(self.opcode & 0x0F00) as usize >> 8] =
-                        self.v[(self.opcode & 0x00F0) as usize >> 4];
+                    self.v[(opcode & 0x0F00) as usize >> 8] =
+                        self.v[(opcode & 0x00F0) as usize >> 4];
                 }
                 0x1 => {
                     // store VY | VX in VX
                     println!("8XY1");
-                    self.v[(self.opcode & 0x0F00) as usize >> 8] |=
-                        self.v[(self.opcode & 0x00F0) as usize >> 4];
+                    self.v[(opcode & 0x0F00) as usize >> 8] |=
+                        self.v[(opcode & 0x00F0) as usize >> 4];
                 }
                 0x2 => {
                     // store VY & VX in VX
                     println!("8XY2");
-                    self.v[(self.opcode & 0x0F00) as usize >> 8] &=
-                        self.v[(self.opcode & 0x00F0) as usize >> 4];
+                    self.v[(opcode & 0x0F00) as usize >> 8] &=
+                        self.v[(opcode & 0x00F0) as usize >> 4];
                 }
                 0x3 => {
                     // store VY xor VX in VX
                     println!("8XY3");
-                    self.v[(self.opcode & 0x0F00) as usize >> 8] ^=
-                        self.v[(self.opcode & 0x00F0) as usize >> 4];
+                    self.v[(opcode & 0x0F00) as usize >> 8] ^=
+                        self.v[(opcode & 0x00F0) as usize >> 4];
                 }
                 0x4 => {
                     // Add VY to VX
                     // if carry occurred, set vf to 01 else vf to 00
                     println!("8XY4");
-                    let x = (self.opcode & 0x0F00) as usize >> 8;
-                    let y = (self.opcode & 0x00F0) as usize >> 4;
+                    let x = (opcode & 0x0F00) as usize >> 8;
+                    let y = (opcode & 0x00F0) as usize >> 4;
                     let (result, overflow) = self.v[x].overflowing_add(self.v[y]);
                     self.v[x] = result;
                     self.v[0xF] = if overflow { 0x01 } else { 0x00 };
@@ -174,23 +176,28 @@ impl CPU {
                     println!("8XY5");
                     // Sub VY from VX
                     // if borrow occurred, set vf to 00 else vf to 01
-                    let x = (self.opcode & 0x0F00) as usize >> 8;
-                    let y = (self.opcode & 0x00F0) as usize >> 4;
+                    let x = (opcode & 0x0F00) as usize >> 8;
+                    let y = (opcode & 0x00F0) as usize >> 4;
                     let (result, borrow) = self.v[x].overflowing_sub(self.v[y]);
                     self.v[x] = result;
                     self.v[0xF] = if borrow { 0x00 } else { 0x01 };
                 }
                 0x6 => {
-                    println!("8XY6")
+                    // Store NN in vX
+                    println!("8XY6");
+                    self.v[(opcode & 0x0F00) as usize >> 8] = (opcode & 0x00FF) as u8;
                 }
                 0x7 => {
-                    println!("8XY7")
+                    // Add NN to vX
+                    println!("8XY7");
+                    self.v[(opcode & 0x0F00) as usize >> 8] =
+                        self.v[(opcode & 0x00F0) as usize >> 4] + (opcode & 0x00FF) as u8;
                 }
                 0xE => {
                     println!("8XYE")
                 }
                 _ => {
-                    println!("Unknown opcode: 0x{:x}", self.opcode);
+                    println!("Unknown opcode: 0x{:x}", opcode);
                 }
             },
             0x9000 => {
@@ -209,7 +216,7 @@ impl CPU {
             0xD000 => {
                 println!("DXYN")
             }
-            0xE000 => match self.opcode & 0x00FF {
+            0xE000 => match opcode & 0x00FF {
                 0x9E => {
                     println!("EX9E")
                 }
@@ -217,10 +224,10 @@ impl CPU {
                     println!("EXA1")
                 }
                 _ => {
-                    println!("Unknown opcode: 0x{:x}", self.opcode);
+                    println!("Unknown opcode: 0x{:x}", opcode);
                 }
             },
-            0xF000 => match self.opcode & 0x00FF {
+            0xF000 => match opcode & 0x00FF {
                 0x07 => {
                     println!("FX07")
                 }
@@ -249,12 +256,12 @@ impl CPU {
                     println!("FX65")
                 }
                 _ => {
-                    println!("Unknown opcode: 0x{:x}", self.opcode);
+                    println!("Unknown opcode: 0x{:x}", opcode);
                 }
             },
 
             _ => {
-                println!("Unknown opcode: 0x{:x}", self.opcode);
+                println!("Unknown opcode: 0x{:x}", opcode);
             }
         }
     }
@@ -262,7 +269,6 @@ impl CPU {
 
 #[cfg(test)]
 mod tests {
-    use std::arch::x86_64::_MM_FROUND_NO_EXC;
 
     use super::*;
     use pretty_assertions::assert_eq;
@@ -405,5 +411,15 @@ mod tests {
         cpu.v[1] = 0x20;
         cpu.cycle();
         assert!(cpu.v[0] == 0x20);
+    }
+
+    #[test]
+    fn test_store_vx() {
+        let mut cpu = setup();
+        let program = vec![0x61, 0x23];
+        cpu.load(program.clone());
+
+        cpu.cycle();
+        assert!(cpu.v[1] == 0x23);
     }
 }
