@@ -1,4 +1,7 @@
 use core::panic;
+use rand;
+
+use crate::fontset::FONTSET;
 
 const PROGRAM_START: u16 = 0x200;
 const MEMORY_SIZE: usize = 4096;
@@ -83,8 +86,11 @@ impl CPU {
                     self.gfx = [0; 64 * 32];
                     self.pc += 2;
                 }
+                // TODO: Stack pushing popping tests
                 0xEE => {
                     println!("return");
+                    self.pc = self.stack[self.sp as usize];
+                    self.sp -= 1;
                 }
                 _ => {
                     println!("Unknown opcode: 0x{:x}", opcode);
@@ -105,18 +111,18 @@ impl CPU {
             0x3000 => {
                 // Skip next instruction if vX == NN
                 println!("3XNN");
-                self.pc += 2;
                 if self.v[(opcode & 0x0F00) as usize >> 8] == (opcode & 0x00FF) as u8 {
                     self.pc += 2;
                 }
+                self.pc += 2;
             }
             0x4000 => {
                 // Skip next instruction if vX != NN
                 println!("4XNN");
-                self.pc += 2;
                 if self.v[(opcode & 0x0F00) as usize >> 8] != (opcode & 0x00FF) as u8 {
                     self.pc += 2;
                 }
+                self.pc += 2;
             }
             0x5000 => {
                 // Skip next instruction if VX == VY
@@ -132,10 +138,12 @@ impl CPU {
                 // Store NN in vX
                 println!("6XNN");
                 self.v[(opcode & 0x0F00) as usize >> 8] = (opcode & 0x00FF) as u8;
+                self.pc += 2;
             }
             0x7000 => {
                 println!("7XNN");
                 self.v[(opcode & 0x0F00) as usize >> 8] += (opcode & 0x00FF) as u8;
+                self.pc += 2;
             }
             0x8000 => match opcode & 0xF {
                 0x0 => {
@@ -143,24 +151,28 @@ impl CPU {
                     println!("8XY0");
                     self.v[(opcode & 0x0F00) as usize >> 8] =
                         self.v[(opcode & 0x00F0) as usize >> 4];
+                    self.pc += 2;
                 }
                 0x1 => {
                     // store VY | VX in VX
                     println!("8XY1");
                     self.v[(opcode & 0x0F00) as usize >> 8] |=
                         self.v[(opcode & 0x00F0) as usize >> 4];
+                    self.pc += 2;
                 }
                 0x2 => {
                     // store VY & VX in VX
                     println!("8XY2");
                     self.v[(opcode & 0x0F00) as usize >> 8] &=
                         self.v[(opcode & 0x00F0) as usize >> 4];
+                    self.pc += 2;
                 }
                 0x3 => {
                     // store VY xor VX in VX
                     println!("8XY3");
                     self.v[(opcode & 0x0F00) as usize >> 8] ^=
                         self.v[(opcode & 0x00F0) as usize >> 4];
+                    self.pc += 2;
                 }
                 0x4 => {
                     // Add VY to VX
@@ -171,6 +183,7 @@ impl CPU {
                     let (result, overflow) = self.v[x].overflowing_add(self.v[y]);
                     self.v[x] = result;
                     self.v[0xF] = if overflow { 0x01 } else { 0x00 };
+                    self.pc += 2;
                 }
                 0x5 => {
                     println!("8XY5");
@@ -181,47 +194,85 @@ impl CPU {
                     let (result, borrow) = self.v[x].overflowing_sub(self.v[y]);
                     self.v[x] = result;
                     self.v[0xF] = if borrow { 0x00 } else { 0x01 };
+                    self.pc += 2;
                 }
                 0x6 => {
                     // Store NN in vX
                     println!("8XY6");
                     self.v[(opcode & 0x0F00) as usize >> 8] = (opcode & 0x00FF) as u8;
+                    self.pc += 2;
                 }
                 0x7 => {
                     // Add NN to vX
                     println!("8XY7");
                     self.v[(opcode & 0x0F00) as usize >> 8] =
                         self.v[(opcode & 0x00F0) as usize >> 4] + (opcode & 0x00FF) as u8;
+                    self.pc += 2;
                 }
                 0xE => {
-                    println!("8XYE")
+                    // Store vy << 1 in vx. Set vf to most significant bit of vy before shift.
+                    println!("8XYE");
+                    let x = (opcode & 0x0F00) as usize >> 8;
+                    let y = (opcode & 0x00F0) as usize >> 4;
+                    self.v[0xF] = self.v[y] >> 7;
+                    self.v[x] = self.v[y] << 1;
+                    self.pc += 2;
                 }
                 _ => {
                     println!("Unknown opcode: 0x{:x}", opcode);
                 }
             },
             0x9000 => {
-                println!("9XY0")
+                // Skip next instruction if vX != vY
+                println!("9XY0");
+                let x = (opcode & 0x0F00) as usize >> 8;
+                let y: usize = (opcode & 0x00F0) as usize >> 4;
+                if self.v[x] != self.v[y] {
+                    self.pc += 2;
+                }
+                self.pc += 2;
             }
             0xA000 => {
                 // ANNN: Sets I to address NNN
-                println!("ANNN")
+                println!("ANNN");
+                self.i = opcode & 0x0FFF;
+                self.pc += 2;
             }
             0xB000 => {
-                println!("BNNN")
+                // Jump to NNN + v0
+                println!("BNNN");
+                self.pc = (opcode & 0x0FFF) + self.v[0] as u16;
             }
             0xC000 => {
-                println!("CXNN")
+                // Set vX to random number & NN
+                println!("CXNN");
+                let x = (opcode & 0x0F00) as usize >> 8;
+                let nn = (opcode & 0x00FF) as u8;
+                self.v[x] = rand::random::<u8>() & nn;
+                self.pc += 2;
             }
             0xD000 => {
+                // Draw sprite
                 println!("DXYN")
             }
             0xE000 => match opcode & 0x00FF {
+                // TODO: Combine code for these two
                 0x9E => {
-                    println!("EX9E")
+                    // Skip instruction if key with value vX is pressed
+                    println!("EX9E");
+                    let val = self.v[(opcode & 0x0F00) as usize >> 8];
+                    if self.keys[val as usize] == 1 {
+                        self.pc += 2;
+                    }
+                    self.pc += 2;
                 }
                 0xA1 => {
-                    println!("EXA1")
+                    println!("EXA1");
+                    let val = self.v[(opcode & 0x0F00) as usize >> 8];
+                    if self.keys[val as usize] == 0 {
+                        self.pc += 2;
+                    }
+                    self.pc += 2;
                 }
                 _ => {
                     println!("Unknown opcode: 0x{:x}", opcode);
@@ -229,31 +280,80 @@ impl CPU {
             },
             0xF000 => match opcode & 0x00FF {
                 0x07 => {
-                    println!("FX07")
+                    // store delay timer in vX
+                    println!("FX07");
+                    self.v[(opcode & 0x0F00) as usize >> 8] = self.delay_timer;
+                    self.pc += 2;
                 }
                 0x0A => {
-                    println!("FX0A")
+                    // Wait for keypress and store in vX
+                    println!("FX0A");
+                    let first_pressed_key = self.keys.iter().position(|&x| x == 1);
+                    match first_pressed_key {
+                        Some(key) => {
+                            self.v[(opcode & 0x0F00) as usize >> 8] = key as u8;
+                            self.pc += 2;
+                        }
+                        None => {}
+                    }
                 }
                 0x15 => {
-                    println!("FX15")
+                    // Set delay timer to vX
+                    println!("FX15");
+                    self.delay_timer = self.v[(opcode & 0x0F00) as usize >> 8];
                 }
                 0x18 => {
-                    println!("FX18")
+                    // Set sound timer to vX
+                    println!("FX18");
+                    self.sound_timer = self.v[(opcode & 0x0F00) as usize >> 8];
                 }
                 0x1E => {
-                    println!("FX1E")
+                    // Add vX to I
+                    println!("FX1E");
+                    self.i += self.v[(opcode & 0x0F00) as usize >> 8] as u16;
                 }
                 0x29 => {
-                    println!("FX29")
+                    // Set I to location of sprite for digit vX
+                    // Notes:
+                    // * vX should be between 0 and F
+                    // * Fontset is between 0x050-0x0A0
+                    // * Each character is 5 bytes long
+                    println!("FX29");
+                    self.i = self.v[(opcode & 0x0F00) as usize >> 4] as u16 * 5;
+                    self.pc += 2;
                 }
                 0x33 => {
-                    println!("FX33")
+                    // Store binary-coded decimal representation of vX at I, I+1, I+2
+                    // Notes:
+                    // * Since each register is 8 bits, will have at most 3 decimal digits (0-255)
+                    // * Store most significant digit at I, next at I+1, least significant at I+2
+                    println!("FX33");
+                    let x = (opcode & 0x0F00) as usize >> 8;
+                    let val = self.v[x];
+                    self.memory[self.i as usize] = val / 100;
+                    self.memory[(self.i + 1) as usize] = (val / 10) % 10;
+                    self.memory[(self.i + 2) as usize] = val % 10;
+                    self.pc += 2;
                 }
                 0x55 => {
-                    println!("FX55")
+                    // Store v0 to vX in memory starting at I
+                    println!("FX55");
+                    let x = (opcode & 0x0F00) as usize >> 8;
+                    for i in 0..x {
+                        self.memory[(self.i + i as u16) as usize] = self.v[i];
+                    }
+                    self.i = self.i + x as u16 + 1;
+                    self.pc += 2;
                 }
                 0x65 => {
-                    println!("FX65")
+                    // Load v0 to vX from memory starting at I
+                    println!("FX65");
+                    let x = (opcode & 0x0F00) as usize >> 8;
+                    for i in 0..x {
+                        self.v[i] = self.memory[(self.i + i as u16) as usize];
+                    }
+                    self.i = self.i + x as u16 + 1;
+                    self.pc += 2;
                 }
                 _ => {
                     println!("Unknown opcode: 0x{:x}", opcode);
@@ -338,8 +438,9 @@ mod tests {
 
         cpu.load(program.clone());
         cpu.v[0] = 0x11;
+        assert!(cpu.pc == 0x200, "got 0x{:X}", cpu.pc);
         cpu.cycle();
-        assert!(cpu.pc == 0x204);
+        assert!(cpu.pc == 0x204, "got 0x{:X}", cpu.pc);
 
         cpu.initialize();
         cpu.load(program.clone());
@@ -421,5 +522,49 @@ mod tests {
 
         cpu.cycle();
         assert!(cpu.v[1] == 0x23);
+    }
+
+    #[test]
+    fn test_shift_vy_to_vx() {
+        let mut cpu = setup();
+        let program = vec![0x80, 0x1E];
+        cpu.load(program.clone());
+        cpu.v[1] = 0b00000100;
+        cpu.cycle();
+        assert!(cpu.v[0] == 0b00001000);
+        assert!(cpu.v[0xF] == 0);
+        assert!(cpu.v[1] == 0b00000100);
+
+        cpu.initialize();
+        cpu.load(program.clone());
+        cpu.v[1] = 0b10000100;
+        cpu.cycle();
+        assert!(cpu.v[0] == 0b00001000);
+        assert!(cpu.v[0xF] == 1);
+        assert!(cpu.v[1] == 0b10000100);
+    }
+
+    #[test]
+    fn test_keypress() {
+        let mut cpu = setup();
+        let program = vec![0xE0, 0x9E, 0x00, 0x00, 0xE0, 0xA1];
+        cpu.load(program.clone());
+
+        cpu.keys[0] = 1;
+        cpu.cycle();
+        assert!(cpu.pc == PROGRAM_START + 4, "got 0x{:X}", cpu.pc);
+        cpu.keys[0] = 0;
+        cpu.cycle();
+        assert!(cpu.pc == PROGRAM_START + 8, "got 0x{:X}", cpu.pc);
+    }
+
+    #[test]
+    fn test_get_font_address() {
+        let mut cpu = setup();
+        let program = vec![0xF0, 0x29];
+        cpu.load(program.clone());
+        cpu.v[0] = 0x3;
+        cpu.cycle();
+        assert!(cpu.i == 15);
     }
 }

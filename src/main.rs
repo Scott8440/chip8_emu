@@ -1,4 +1,5 @@
 mod cpu;
+mod fontset;
 
 fn main() {
     let mut test_memory: Vec<u8> = Vec::new();
