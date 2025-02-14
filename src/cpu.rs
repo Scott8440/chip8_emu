@@ -9,6 +9,9 @@ const MEMORY_SIZE: usize = 4096;
 
 const FONTSET_START: usize = 0x50;
 
+const SCREEN_WIDTH: usize = 64;
+const SCREEN_HEIGHT: usize = 32;
+
 /*
    Notes on Sprites:
    * One byte corresponds to one row of a sprite
@@ -38,7 +41,7 @@ pub struct CPU {
 
     // Display
     // 2048 pixels total, binary state black or white
-    pub gfx: [u8; 64 * 32],
+    pub gfx: [u8; SCREEN_WIDTH * SCREEN_HEIGHT],
 
     // Stack
     pub stack: [u16; 16],
@@ -58,7 +61,7 @@ impl CPU {
             memory: [0; MEMORY_SIZE],
             i: 0,
             pc: 0,
-            gfx: [0; 64 * 32],
+            gfx: [0; SCREEN_WIDTH * SCREEN_HEIGHT],
             stack: [0; 16],
             sp: 0,
             keys: [0; 16],
@@ -81,7 +84,7 @@ impl CPU {
         self.sound_timer = 0;
 
         // Clear display
-        self.gfx = [0; 64 * 32];
+        self.gfx = [0; SCREEN_WIDTH * SCREEN_HEIGHT];
 
         // Clear keys
         self.keys = [0; 16];
@@ -114,7 +117,7 @@ impl CPU {
             0x0 => match opcode & 0x00FF {
                 0xE0 => {
                     // Clear the screen
-                    self.gfx = [0; 64 * 32];
+                    self.gfx = [0; SCREEN_WIDTH * SCREEN_HEIGHT];
                     self.pc += 2;
                 }
                 // TODO: Stack pushing popping tests
@@ -291,20 +294,29 @@ impl CPU {
                 // * Set VF to 1 if any set pixels are changed to unset, else 0
                 // * To be visible on the screen, the vX register must be
                 //      between 00 and 3F. vY must be between 00 and 1F
+                self.pc += 2;
                 let x = self.v[(opcode & 0x0F00) as usize >> 8] as usize;
                 let y = self.v[(opcode & 0x00F0) as usize >> 4] as usize;
                 let n = (opcode & 0x000F) as usize;
                 let addr = self.i as usize;
-                // Height is the min of N and 1F - vY
-                let height = min(n, 0x1F - y);
-                let max_col = min(8, 0x3F - x);
+                if y >= SCREEN_HEIGHT || x >= SCREEN_WIDTH {
+                    return;
+                }
+                let mut height = n;
+                if y + height > SCREEN_HEIGHT {
+                    height = SCREEN_HEIGHT - y;
+                }
+                let mut width = 8;
+                if x + 8 > SCREEN_WIDTH {
+                    width = SCREEN_WIDTH - x;
+                }
                 self.v[0xF] = 0;
 
                 for row in 0..height {
                     let sprite = self.memory[addr + row];
-                    for col in 0..max_col {
+                    for col in 0..width {
                         let pixel = sprite & (0x80 >> col);
-                        let idx: usize = (x + col + ((y + row) * 64)) as usize;
+                        let idx: usize = (x + col + ((y + row) * SCREEN_WIDTH)) as usize;
                         if pixel != 0 {
                             if self.gfx[idx] == 1 {
                                 self.v[0xF] = 1;
@@ -640,8 +652,10 @@ mod tests {
         cpu.memory[0x200] = 0x7;
         cpu.gfx[0] = 0x8;
         cpu.keys[0] = 0x9;
+        cpu.pc = 0xA;
 
         cpu.initialize();
+
         assert!(cpu.v.iter().all(|&x| x == 0));
         assert!(cpu.i == 0);
         assert!(cpu.sp == 0);
@@ -650,10 +664,98 @@ mod tests {
         assert!(cpu.sound_timer == 0);
         assert!(cpu.gfx.iter().all(|&x| x == 0));
         assert!(cpu.keys.iter().all(|&x| x == 0));
+        assert!(cpu.pc == PROGRAM_START);
 
         // Check various fontset bytes
         assert!(cpu.memory[FONTSET_START as usize] == 0xF0);
         assert!(cpu.memory[FONTSET_START as usize + 5] == 0x20);
         assert!(cpu.memory[FONTSET_START as usize + 79] == 0x80);
+    }
+
+    #[test]
+    fn test_draw_sprite() {
+        let mut cpu = setup();
+        // Test drawing out of range has no effect
+        // Out of height range
+        let program = vec![0xD0, 0x11];
+        cpu.load(program.clone());
+        cpu.v[0] = 0x40;
+        cpu.v[1] = 0x00;
+        cpu.i = 0x50;
+        cpu.cycle();
+        assert!(cpu.gfx.iter().all(|&x| x == 0));
+        assert!(cpu.v[0xF] == 0);
+
+        // out of width range
+        cpu.initialize();
+        cpu.load(program.clone());
+        cpu.v[0] = 0x00;
+        cpu.v[1] = 0x20;
+        cpu.i = 0x50;
+        cpu.cycle();
+        assert!(cpu.gfx.iter().all(|&x| x == 0));
+        assert!(cpu.v[0xF] == 0);
+
+        // Test drawing sprite
+        cpu.initialize();
+        let program = vec![0xD0, 0x05, 0xD0, 0x05];
+        cpu.load(program.clone());
+        cpu.v[0] = 0x00;
+        cpu.i = 0x50; // Sprite for 0
+        cpu.cycle();
+        assert!(cpu.gfx[0] == 1);
+        assert!(cpu.gfx[1] == 1);
+        assert!(cpu.gfx[2] == 1);
+        assert!(cpu.gfx[3] == 1);
+        assert!(cpu.gfx[0 + SCREEN_WIDTH] == 1);
+        assert!(cpu.gfx[3 + SCREEN_WIDTH] == 1);
+        assert!(cpu.gfx[0 + SCREEN_WIDTH * 2] == 1);
+        assert!(cpu.gfx[3 + SCREEN_WIDTH * 2] == 1);
+        assert!(cpu.gfx[0 + SCREEN_WIDTH * 3] == 1);
+        assert!(cpu.gfx[3 + SCREEN_WIDTH * 3] == 1);
+        assert!(cpu.gfx[0 + SCREEN_WIDTH * 4] == 1);
+        assert!(cpu.gfx[1 + SCREEN_WIDTH * 4] == 1);
+        assert!(cpu.gfx[2 + SCREEN_WIDTH * 4] == 1);
+        assert!(cpu.gfx[3 + SCREEN_WIDTH * 4] == 1);
+        assert!(cpu.v[0xF] == 0);
+        cpu.cycle();
+        assert!(cpu.gfx.iter().all(|&x| x == 0));
+        assert!(cpu.v[0xF] == 1);
+
+        // Test drawing sprite near right edge
+        cpu.initialize();
+        let program = vec![0xD0, 0x15];
+        cpu.load(program.clone());
+        cpu.v[0] = SCREEN_WIDTH as u8 - 4; // Just enough to fit sprite
+        cpu.v[1] = 0x01;
+        cpu.i = 0x50;
+        cpu.cycle();
+        assert!(cpu.gfx.iter().take(SCREEN_WIDTH).all(|&x| x == 0));
+        assert!(cpu.gfx[SCREEN_WIDTH - 4 + SCREEN_WIDTH] == 1);
+        assert!(cpu.gfx[SCREEN_WIDTH - 3 + SCREEN_WIDTH] == 1);
+        assert!(cpu.gfx[SCREEN_WIDTH - 2 + SCREEN_WIDTH] == 1);
+        assert!(cpu.gfx[SCREEN_WIDTH - 1 + SCREEN_WIDTH] == 1);
+        assert!(cpu.v[0xF] == 0);
+
+        // Test drawing sprite near top
+        cpu.initialize();
+        let program = vec![0xD0, 0x15];
+        cpu.load(program.clone());
+        cpu.v[0] = 0x00;
+        cpu.v[1] = SCREEN_HEIGHT as u8 - 1;
+        cpu.i = 0x50;
+        cpu.cycle();
+
+        assert!(cpu
+            .gfx
+            .iter()
+            .take(SCREEN_WIDTH * (SCREEN_HEIGHT - 1))
+            .all(|&x| x == 0));
+        assert!(cpu.gfx[0 + SCREEN_WIDTH * (SCREEN_HEIGHT - 1)] == 1);
+        assert!(cpu.gfx[1 + SCREEN_WIDTH * (SCREEN_HEIGHT - 1)] == 1);
+        assert!(cpu.gfx[2 + SCREEN_WIDTH * (SCREEN_HEIGHT - 1)] == 1);
+        assert!(cpu.gfx[3 + SCREEN_WIDTH * (SCREEN_HEIGHT - 1)] == 1);
+        assert!(cpu.gfx[4 + SCREEN_WIDTH * (SCREEN_HEIGHT - 1)] == 0);
+        assert!(cpu.v[0xF] == 0);
     }
 }
