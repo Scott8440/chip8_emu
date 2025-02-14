@@ -484,8 +484,9 @@ mod tests {
     use super::*;
     use pretty_assertions::assert_eq;
 
-    fn setup() -> CPU {
-        let mut cpu = CPU::new();
+    fn setup() -> CPU<NullDisplay> {
+        let display = NullDisplay::new();
+        let mut cpu = CPU::new(display);
         cpu.initialize();
         cpu
     }

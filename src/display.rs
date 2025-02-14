@@ -21,6 +21,20 @@ impl MiniFBDisplay {
     }
 }
 
+pub struct NullDisplay;
+
+impl NullDisplay {
+    pub fn new() -> Self {
+        NullDisplay
+    }
+}
+
+impl Display for NullDisplay {
+    fn update(&mut self, _buffer: &[u8], _width: usize, _height: usize) {}
+    fn is_open(&self) -> bool { true }
+    fn is_key_down(&self, _key: usize) -> bool { false }
+}
+
 impl Display for MiniFBDisplay {
     fn update(&mut self, gfx: &[u8], width: usize, height: usize) {
         // Convert CHIP-8 display buffer (0,1) to minifb buffer (0x0, 0xFFFFFFFF)
