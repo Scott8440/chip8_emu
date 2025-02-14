@@ -155,14 +155,14 @@ impl<D: Display> CPU<D> {
         // println!("\npc: 0x{:x}, opcode: 0x{:x}", self.pc, opcode);
 
         match opcode & 0xF000 {
-            0x0 => match opcode & 0x00FF {
-                0xE0 => {
+            0x0 => match opcode & 0x0FFF {
+                0x0E0 => {
                     // Clear the screen
                     // println!("00E0");
                     self.gfx = [0; SCREEN_WIDTH * SCREEN_HEIGHT];
                 }
                 // TODO: Stack pushing popping tests
-                0xEE => {
+                0x0EE => {
                     // println!("return");
                     self.sp -= 1;
                     self.pc = self.stack[self.sp as usize];
