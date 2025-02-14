@@ -7,6 +7,8 @@ use std::cmp::min;
 const PROGRAM_START: u16 = 0x200;
 const MEMORY_SIZE: usize = 4096;
 
+const FONTSET_START: usize = 0x50;
+
 /*
    Notes on Sprites:
    * One byte corresponds to one row of a sprite
@@ -69,6 +71,25 @@ impl CPU {
         self.i = 0;
         self.sp = 0;
         self.v = [0; 16];
+
+        // Clear memory and stack
+        self.memory = [0; MEMORY_SIZE];
+        self.stack = [0; 16];
+
+        // Clear timers
+        self.delay_timer = 0;
+        self.sound_timer = 0;
+
+        // Clear display
+        self.gfx = [0; 64 * 32];
+
+        // Clear keys
+        self.keys = [0; 16];
+
+        // Load fontset
+        for (i, &byte) in FONTSET.iter().enumerate() {
+            self.memory[i + FONTSET_START] = byte;
+        }
     }
 
     pub fn load(&mut self, input: Vec<u8>) {
@@ -357,7 +378,8 @@ impl CPU {
                     // * Fontset is between 0x050-0x0A0
                     // * Each character is 5 bytes long
                     println!("FX29");
-                    self.i = self.v[(opcode & 0x0F00) as usize >> 4] as u16 * 5 + 0x50;
+                    self.i =
+                        self.v[(opcode & 0x0F00) as usize >> 4] as u16 * 5 + FONTSET_START as u16;
                     self.pc += 2;
                 }
                 0x33 => {
@@ -603,6 +625,35 @@ mod tests {
         cpu.load(program.clone());
         cpu.v[0] = 0x3;
         cpu.cycle();
-        assert!(cpu.i == 15);
+        assert!(cpu.i == (0x3 * 5) + FONTSET_START as u16);
+    }
+
+    #[test]
+    fn test_initialize() {
+        let mut cpu = setup();
+        cpu.v[0] = 0x1;
+        cpu.i = 0x2;
+        cpu.sp = 0x3;
+        cpu.stack[0] = 0x4;
+        cpu.delay_timer = 0x5;
+        cpu.sound_timer = 0x6;
+        cpu.memory[0x200] = 0x7;
+        cpu.gfx[0] = 0x8;
+        cpu.keys[0] = 0x9;
+
+        cpu.initialize();
+        assert!(cpu.v.iter().all(|&x| x == 0));
+        assert!(cpu.i == 0);
+        assert!(cpu.sp == 0);
+        assert!(cpu.stack.iter().all(|&x| x == 0));
+        assert!(cpu.delay_timer == 0);
+        assert!(cpu.sound_timer == 0);
+        assert!(cpu.gfx.iter().all(|&x| x == 0));
+        assert!(cpu.keys.iter().all(|&x| x == 0));
+
+        // Check various fontset bytes
+        assert!(cpu.memory[FONTSET_START as usize] == 0xF0);
+        assert!(cpu.memory[FONTSET_START as usize + 5] == 0x20);
+        assert!(cpu.memory[FONTSET_START as usize + 79] == 0x80);
     }
 }
