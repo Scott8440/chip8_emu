@@ -26,12 +26,18 @@ fn main() {
     let window = get_window();
     let display = MiniFBDisplay::new(window);
     
-    let mut test_memory: Vec<u8> = Vec::new();
-    test_memory.push(0xA2);
-    test_memory.push(0xF0);
+    // Create an infinite loop program:
+    // 0x200: 0x6001 - Set V0 to 1
+    // 0x202: 0x7001 - Add 1 to V0
+    // 0x204: 0x1202 - Jump back to 0x202
+    let mut program: Vec<u8> = vec![
+        0x60, 0x01,  // Set V0 = 1
+        0x70, 0x01,  // Add 1 to V0
+        0x12, 0x02   // Jump to 0x202
+    ];
 
     let mut cpu = cpu::CPU::new(display);
     cpu.initialize();
-    cpu.load(test_memory);
+    cpu.load(program);
     cpu.run();
 }
