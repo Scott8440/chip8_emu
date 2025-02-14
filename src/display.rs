@@ -27,12 +27,12 @@ impl Display for MiniFBDisplay {
         let window_size = self.window.get_size();
         let scale_x = window_size.0 / width;
         let scale_y = window_size.1 / height;
-        
+
         for y in 0..height {
             for x in 0..width {
                 let pixel = gfx[y * width + x];
                 let color = if pixel == 0 { 0 } else { 0xFFFFFFFF };
-                
+
                 // Scale up the pixel
                 for sy in 0..scale_y {
                     for sx in 0..scale_x {
@@ -43,8 +43,10 @@ impl Display for MiniFBDisplay {
                 }
             }
         }
-        
-        self.window.update_with_buffer(&self.buffer, window_size.0, window_size.1).unwrap();
+
+        self.window
+            .update_with_buffer(&self.buffer, window_size.0, window_size.1)
+            .unwrap();
     }
 
     fn is_open(&self) -> bool {
@@ -54,10 +56,22 @@ impl Display for MiniFBDisplay {
     fn is_key_down(&self, key: usize) -> bool {
         use minifb::Key;
         let keys = [
-            Key::X, Key::Key1, Key::Key2, Key::Key3,
-            Key::Q, Key::W, Key::E, Key::A,
-            Key::S, Key::D, Key::Z, Key::C,
-            Key::Key4, Key::R, Key::F, Key::V,
+            Key::X,
+            Key::Key1,
+            Key::Key2,
+            Key::Key3,
+            Key::Q,
+            Key::W,
+            Key::E,
+            Key::A,
+            Key::S,
+            Key::D,
+            Key::Z,
+            Key::C,
+            Key::Key4,
+            Key::R,
+            Key::F,
+            Key::V,
         ];
         if key < keys.len() {
             self.window.is_key_down(keys[key])
@@ -80,20 +94,7 @@ impl Display for NullDisplay {
     fn is_open(&self) -> bool {
         true
     }
-}
-
-impl Display for MiniFBDisplay {
-    fn update(&mut self, gfx: &[u8], width: usize, height: usize) {
-        // Convert CHIP-8 display buffer (0,1) to minifb buffer (0x0, 0xFFFFFFFF)
-        for (i, &pixel) in gfx.iter().enumerate() {
-            self.buffer[i] = if pixel == 0 { 0 } else { 0xFFFFFFFF };
-        }
-        self.window
-            .update_with_buffer(&self.buffer, width, height)
-            .unwrap();
-    }
-
-    fn is_open(&self) -> bool {
-        self.window.is_open()
+    fn is_key_down(&self, key: usize) -> bool {
+        false
     }
 }

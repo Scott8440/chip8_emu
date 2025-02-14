@@ -149,6 +149,7 @@ impl<D: Display> CPU<D> {
         self.opcode = (self.memory[self.pc as usize] as u16) << 8
             | (self.memory[self.pc as usize + 1] as u16);
         let opcode = self.opcode;
+        println!("\npc: 0x{:x}, opcode: 0x{:x}", self.pc, opcode);
 
         match opcode & 0xF000 {
             0x0 => match opcode & 0x00FF {
@@ -192,6 +193,9 @@ impl<D: Display> CPU<D> {
             0x4000 => {
                 // Skip next instruction if vX != NN
                 println!("4XNN");
+                let x = (opcode & 0x0F00) as usize >> 8;
+                let nn = (opcode & 0x00FF) as u8;
+                println!("vx: {}, nn: {}", self.v[x], nn);
                 if self.v[(opcode & 0x0F00) as usize >> 8] != (opcode & 0x00FF) as u8 {
                     self.pc += 2;
                 }
