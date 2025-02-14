@@ -1,0 +1,16 @@
+60 00   // Set V0 = 0 (current character)
+61 0A   // Set V1 = 10 (x position)
+62 0A   // Set V2 = 10 (y position)
+F0 29   // Set I to font address for V0
+D1 25   // Draw sprite at (V1,V2) with height 5
+64 1E   // Set V4 = 30 (delay timer value)
+F4 15   // Set delay timer to V4 (30/60 = 0.5 seconds)
+F5 07   // Get delay timer value into V5
+35 00   // Skip if V5 != 0 (wait until timer expires)
+12 0E   // Jump back to check timer
+00 E0   // Clear screen
+65 00   // Reset V5 to 0 for next character
+70 01   // Add 1 to V0 (next character)
+40 10   // Skip if V0 == 16
+60 00   // reset character to 0
+12 04   // Jump back to font loading (F029)
