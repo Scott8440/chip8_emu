@@ -209,7 +209,8 @@ impl<D: Display> CPU<D> {
                 let x = (opcode & 0x0F00) as usize >> 8;
                 let add = (opcode & 0x00FF) as u8;
                 println!("x: {}, add: {}", x, add);
-                self.v[(opcode & 0x0F00) as usize >> 8] += (opcode & 0x00FF) as u8;
+                // Wrapping add to handle overflow correctly
+                self.v[x] = self.v[x].wrapping_add(add);
                 self.pc += 2;
             }
             0x8000 => match opcode & 0xF {
