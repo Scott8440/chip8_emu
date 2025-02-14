@@ -279,16 +279,22 @@ impl<D: Display> CPU<D> {
                     self.pc += 2;
                 }
                 0x6 => {
-                    // Store NN in vX
+                    // Store vy >> 1 in vx. Set vf to LSB of vy before shift
                     println!("8XY6");
-                    self.v[(opcode & 0x0F00) as usize >> 8] = (opcode & 0x00FF) as u8;
+                    let x = (opcode & 0x0F00) as usize >> 8;
+                    let y = (opcode & 0x00F0) as usize >> 4;
+                    self.v[0xF] = self.v[y] & 0x01;
+                    self.v[x] = self.v[y] >> 1;
                     self.pc += 2;
                 }
                 0x7 => {
-                    // Add NN to vX
+                    // Set vX = Vy - Vx, set VF to !borrowed
                     println!("8XY7");
-                    self.v[(opcode & 0x0F00) as usize >> 8] =
-                        self.v[(opcode & 0x00F0) as usize >> 4].wrapping_add(opcode as u8 & 0x00FF);
+                    let x = (opcode & 0x0F00) as usize >> 8;
+                    let y = (opcode & 0x00F0) as usize >> 4;
+                    let (result, borrow) = self.v[y].overflowing_sub(self.v[x]);
+                    self.v[x] = result;
+                    self.v[0xF] = if borrow { 0x00 } else { 0x01 };
                     self.pc += 2;
                 }
                 0xE => {
