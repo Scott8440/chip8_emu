@@ -14,7 +14,7 @@ impl MiniFBDisplay {
     pub fn new(window: Window) -> Self {
         MiniFBDisplay {
             window,
-            buffer: vec![0; 64 * 32], // CHIP-8 display size
+            buffer: vec![0; window.get_size().0 * window.get_size().1],
         }
     }
 }

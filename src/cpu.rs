@@ -430,7 +430,7 @@ impl<D: Display> CPU<D> {
                     // * Each character is 5 bytes long
                     println!("FX29");
                     self.i =
-                        self.v[(opcode & 0x0F00) as usize >> 4] as u16 * 5 + FONTSET_START as u16;
+                        self.v[(opcode & 0x0F00) as usize >> 8] as u16 * 5 + FONTSET_START as u16;
                     self.pc += 2;
                 }
                 0x33 => {
@@ -450,21 +450,18 @@ impl<D: Display> CPU<D> {
                     // Store v0 to vX in memory starting at I
                     println!("FX55");
                     let x = (opcode & 0x0F00) as usize >> 8;
-                    for i in 0..x {
+                    for i in 0..=x {
                         self.memory[(self.i + i as u16) as usize] = self.v[i];
                     }
-                    self.i = self.i + x as u16 + 1;
                     self.pc += 2;
                 }
                 0x65 => {
                     // Load v0 to vX from memory starting at I
                     println!("FX65");
                     let x = (opcode & 0x0F00) as usize >> 8;
-                    for i in 0..(x + 1) {
-                        println!("i: {}, x: {}", i, x);
+                    for i in 0..=x {
                         self.v[i] = self.memory[(self.i + i as u16) as usize];
                     }
-                    self.i = self.i + x as u16 + 1;
                     self.pc += 2;
                 }
                 _ => {
