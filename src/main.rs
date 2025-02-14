@@ -9,8 +9,8 @@ use display::MiniFBDisplay;
 use minifb::{Window, WindowOptions};
 
 fn get_window() -> Window {
-    let width = 100;
-    let height = 100;
+    let width = 64;
+    let height = 32;
 
     Window::new(
         "Test",

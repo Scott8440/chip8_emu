@@ -3,6 +3,7 @@ use minifb::Window;
 pub trait Display {
     fn update(&mut self, buffer: &[u8], width: usize, height: usize);
     fn is_open(&self) -> bool;
+    fn is_key_down(&self, key: usize) -> bool;
 }
 
 pub struct MiniFBDisplay {
@@ -12,10 +13,9 @@ pub struct MiniFBDisplay {
 
 impl MiniFBDisplay {
     pub fn new(window: Window) -> Self {
-        let size = window.get_size();
         MiniFBDisplay {
             window,
-            buffer: vec![0; size.0 * size.1],
+            buffer: vec![0; 64 * 32], // CHIP-8 display size
         }
     }
 }
@@ -32,6 +32,9 @@ impl Display for NullDisplay {
     fn update(&mut self, _buffer: &[u8], _width: usize, _height: usize) {}
     fn is_open(&self) -> bool {
         true
+    }
+    fn is_key_down(&self, _key: usize) -> bool {
+        false
     }
 }
 
