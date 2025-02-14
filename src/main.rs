@@ -9,16 +9,17 @@ use display::MiniFBDisplay;
 use minifb::{Window, WindowOptions};
 
 fn get_window() -> Window {
-    let width = 64;
-    let height = 32;
+    let scale = 10;
+    let width = 64 * scale;
+    let height = 32 * scale;
 
     Window::new(
-        "Test",
+        "CHIP-8 Emulator",
         width,
         height,
         WindowOptions {
-            resize: true,
-            scale: minifb::Scale::X8,
+            resize: false,
+            scale: minifb::Scale::X1,
             ..WindowOptions::default()
         },
     )
