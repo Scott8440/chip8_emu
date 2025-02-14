@@ -81,9 +81,9 @@ impl CPU {
                 // TODO: Play sound here
                 self.sound_timer -= 1;
 
-            // Insert 1/60 second delay to ensure 60hz timers
-            std::thread::sleep(std::time::Duration::from_millis(1000 / 60));
-
+                // Insert 1/60 second delay to ensure 60hz timers
+                std::thread::sleep(std::time::Duration::from_millis(1000 / 60));
+            }
         }
     }
 
