@@ -2,7 +2,6 @@ use core::panic;
 use rand;
 
 use crate::fontset::FONTSET;
-use std::cmp::min;
 
 const PROGRAM_START: u16 = 0x200;
 const MEMORY_SIZE: usize = 4096;
@@ -68,6 +67,26 @@ impl CPU {
         }
     }
 
+    pub fn run(&mut self) {
+        loop {
+            if !self.cycle() {
+                break;
+            }
+
+            // Decrement timers
+            if self.delay_timer > 0 {
+                self.delay_timer -= 1;
+            }
+            if self.sound_timer > 0 {
+                // TODO: Play sound here
+                self.sound_timer -= 1;
+
+            // Insert 1/60 second delay to ensure 60hz timers
+            std::thread::sleep(std::time::Duration::from_millis(1000 / 60));
+
+        }
+    }
+
     pub fn initialize(&mut self) {
         self.pc = PROGRAM_START;
         self.opcode = 0;
@@ -106,7 +125,7 @@ impl CPU {
         }
     }
 
-    pub fn cycle(&mut self) {
+    pub fn cycle(&mut self) -> bool {
         // Fetch opcode
         // TODO: Does opcode need to be a member variable?
         self.opcode = (self.memory[self.pc as usize] as u16) << 8
@@ -128,6 +147,7 @@ impl CPU {
                 }
                 _ => {
                     println!("Unknown opcode: 0x{:x}", opcode);
+                    return false;
                 }
             },
             0x1000 => {
@@ -254,6 +274,7 @@ impl CPU {
                 }
                 _ => {
                     println!("Unknown opcode: 0x{:x}", opcode);
+                    return false;
                 }
             },
             0x9000 => {
@@ -300,7 +321,7 @@ impl CPU {
                 let n = (opcode & 0x000F) as usize;
                 let addr = self.i as usize;
                 if y >= SCREEN_HEIGHT || x >= SCREEN_WIDTH {
-                    return;
+                    return true;
                 }
                 let mut height = n;
                 if y + height > SCREEN_HEIGHT {
@@ -347,6 +368,7 @@ impl CPU {
                 }
                 _ => {
                     println!("Unknown opcode: 0x{:x}", opcode);
+                    return false;
                 }
             },
             0xF000 => match opcode & 0x00FF {
@@ -372,16 +394,19 @@ impl CPU {
                     // Set delay timer to vX
                     println!("FX15");
                     self.delay_timer = self.v[(opcode & 0x0F00) as usize >> 8];
+                    self.pc += 2;
                 }
                 0x18 => {
                     // Set sound timer to vX
                     println!("FX18");
                     self.sound_timer = self.v[(opcode & 0x0F00) as usize >> 8];
+                    self.pc += 2;
                 }
                 0x1E => {
                     // Add vX to I
                     println!("FX1E");
                     self.i += self.v[(opcode & 0x0F00) as usize >> 8] as u16;
+                    self.pc += 2;
                 }
                 0x29 => {
                     // Set I to location of sprite for digit vX
@@ -429,13 +454,16 @@ impl CPU {
                 }
                 _ => {
                     println!("Unknown opcode: 0x{:x}", opcode);
+                    return false;
                 }
             },
 
             _ => {
                 println!("Unknown opcode: 0x{:x}", opcode);
+                return false;
             }
         }
+        true
     }
 }
 
