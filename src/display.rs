@@ -3,7 +3,6 @@ use minifb::Window;
 pub trait Display {
     fn update(&mut self, buffer: &[u8], width: usize, height: usize);
     fn is_open(&self) -> bool;
-    fn is_key_down(&self, key: usize) -> bool;
 }
 
 pub struct MiniFBDisplay {
@@ -32,9 +31,6 @@ impl Display for NullDisplay {
     fn update(&mut self, _buffer: &[u8], _width: usize, _height: usize) {}
     fn is_open(&self) -> bool {
         true
-    }
-    fn is_key_down(&self, _key: usize) -> bool {
-        false
     }
 }
 

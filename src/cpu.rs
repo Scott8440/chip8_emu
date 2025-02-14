@@ -274,7 +274,7 @@ impl<D: Display> CPU<D> {
                     // Add NN to vX
                     println!("8XY7");
                     self.v[(opcode & 0x0F00) as usize >> 8] =
-                        self.v[(opcode & 0x00F0) as usize >> 4] + (opcode & 0x00FF) as u8;
+                        self.v[(opcode & 0x00F0) as usize >> 4].wrapping_add(opcode as u8 & 0x00FF);
                     self.pc += 2;
                 }
                 0xE => {
