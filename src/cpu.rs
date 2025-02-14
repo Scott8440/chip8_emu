@@ -132,13 +132,9 @@ impl<D: Display> CPU<D> {
     }
 
     pub fn cycle(&mut self) -> bool {
-        // print self.pc in hex
-        // Fetch opcode
-        // TODO: Does opcode need to be a member variable?
         self.opcode = (self.memory[self.pc as usize] as u16) << 8
             | (self.memory[self.pc as usize + 1] as u16);
         let opcode = self.opcode;
-        println!("\npc: 0x{:x}, 0x{:x}", self.pc, self.opcode);
 
         match opcode & 0xF000 {
             0x0 => match opcode & 0x00FF {
