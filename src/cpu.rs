@@ -133,17 +133,18 @@ impl<D: Display> CPU<D> {
 
     pub fn cycle(&mut self) -> bool {
         // print self.pc in hex
-        println!("pc: 0x{:x}", self.pc);
         // Fetch opcode
         // TODO: Does opcode need to be a member variable?
         self.opcode = (self.memory[self.pc as usize] as u16) << 8
             | (self.memory[self.pc as usize + 1] as u16);
         let opcode = self.opcode;
+        println!("\npc: 0x{:x}, 0x{:x}", self.pc, self.opcode);
 
         match opcode & 0xF000 {
             0x0 => match opcode & 0x00FF {
                 0xE0 => {
                     // Clear the screen
+                    println!("00E0");
                     self.gfx = [0; SCREEN_WIDTH * SCREEN_HEIGHT];
                     self.pc += 2;
                 }
@@ -203,7 +204,11 @@ impl<D: Display> CPU<D> {
                 self.pc += 2;
             }
             0x7000 => {
+                // Add NN to vX
                 println!("7XNN");
+                let x = (opcode & 0x0F00) as usize >> 8;
+                let add = (opcode & 0x00FF) as u8;
+                println!("x: {}, add: {}", x, add);
                 self.v[(opcode & 0x0F00) as usize >> 8] += (opcode & 0x00FF) as u8;
                 self.pc += 2;
             }
@@ -454,7 +459,8 @@ impl<D: Display> CPU<D> {
                     // Load v0 to vX from memory starting at I
                     println!("FX65");
                     let x = (opcode & 0x0F00) as usize >> 8;
-                    for i in 0..x {
+                    for i in 0..(x + 1) {
+                        println!("i: {}, x: {}", i, x);
                         self.v[i] = self.memory[(self.i + i as u16) as usize];
                     }
                     self.i = self.i + x as u16 + 1;
