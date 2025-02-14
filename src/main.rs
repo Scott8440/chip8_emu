@@ -1,7 +1,9 @@
 mod cpu;
+mod display;
 mod fontset;
 
-use minifb::{Key, Window, WindowOptions};
+use display::MiniFBDisplay;
+use minifb::{Window, WindowOptions};
 
 fn get_window() -> Window {
     let width = 100;
@@ -21,21 +23,15 @@ fn get_window() -> Window {
 }
 
 fn main() {
-    let mut window = get_window();
-    let x = 50;
-    let y = 50;
-    let mut buffer: Vec<u32> = vec![0; 100 * 100];
-    buffer[y * 100 + x] = 0xFFFFFFFF; // white pixel
-    while window.is_open() && !window.is_key_down(Key::Escape) {
-        window.update_with_buffer(&buffer, 100, 100).unwrap();
-    }
-
+    let window = get_window();
+    let display = MiniFBDisplay::new(window);
+    
     let mut test_memory: Vec<u8> = Vec::new();
     test_memory.push(0xA2);
     test_memory.push(0xF0);
 
-    let mut cpu = cpu::CPU::new();
+    let mut cpu = cpu::CPU::new(display);
     cpu.initialize();
     cpu.load(test_memory);
-    cpu.cycle();
+    cpu.run();
 }

@@ -1,6 +1,7 @@
 use core::panic;
 use rand;
 
+use crate::display::Display;
 use crate::fontset::FONTSET;
 
 const PROGRAM_START: u16 = 0x200;
@@ -21,7 +22,8 @@ const SCREEN_HEIGHT: usize = 32;
 */
 
 #[derive(Debug)]
-pub struct CPU {
+pub struct CPU<D: Display> {
+    display: D,
     pub opcode: u16,
 
     // Registers
@@ -51,8 +53,9 @@ pub struct CPU {
 }
 
 impl CPU {
-    pub fn new() -> CPU {
+    pub fn new(display: D) -> CPU<D> {
         CPU {
+            display,
             opcode: 0,
             v: [0; 16],
             delay_timer: 0,
@@ -68,9 +71,17 @@ impl CPU {
     }
 
     pub fn run(&mut self) {
-        loop {
+        while self.display.is_open() {
             if !self.cycle() {
                 break;
+            }
+
+            // Update display
+            self.display.update(&self.gfx, SCREEN_WIDTH, SCREEN_HEIGHT);
+
+            // Update keys
+            for i in 0..16 {
+                self.keys[i] = if self.display.is_key_down(i) { 1 } else { 0 };
             }
 
             // Decrement timers
@@ -80,10 +91,10 @@ impl CPU {
             if self.sound_timer > 0 {
                 // TODO: Play sound here
                 self.sound_timer -= 1;
-
-                // Insert 1/60 second delay to ensure 60hz timers
-                std::thread::sleep(std::time::Duration::from_millis(1000 / 60));
             }
+
+            // Maintain ~60Hz
+            std::thread::sleep(std::time::Duration::from_millis(1000 / 60));
         }
     }
 
