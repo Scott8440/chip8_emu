@@ -151,6 +151,7 @@ impl<D: Display> CPU<D> {
         self.opcode = (self.memory[self.pc as usize] as u16) << 8
             | (self.memory[self.pc as usize + 1] as u16);
         let opcode = self.opcode;
+        self.pc += 2;
         // println!("\npc: 0x{:x}, opcode: 0x{:x}", self.pc, opcode);
 
         match opcode & 0xF000 {
@@ -159,7 +160,6 @@ impl<D: Display> CPU<D> {
                     // Clear the screen
                     // println!("00E0");
                     self.gfx = [0; SCREEN_WIDTH * SCREEN_HEIGHT];
-                    self.pc += 2;
                 }
                 // TODO: Stack pushing popping tests
                 0xEE => {
@@ -180,7 +180,7 @@ impl<D: Display> CPU<D> {
             0x2000 => {
                 // Call subroutine at NNN
                 // println!("2NNN");
-                self.stack[self.sp as usize] = self.pc + 2;
+                self.stack[self.sp as usize] = self.pc;
                 self.sp += 1;
                 self.pc = opcode & 0x0FFF;
             }
@@ -190,7 +190,6 @@ impl<D: Display> CPU<D> {
                 if self.v[(opcode & 0x0F00) as usize >> 8] == (opcode & 0x00FF) as u8 {
                     self.pc += 2;
                 }
-                self.pc += 2;
             }
             0x4000 => {
                 // Skip next instruction if vX != NN
@@ -201,12 +200,10 @@ impl<D: Display> CPU<D> {
                 if self.v[(opcode & 0x0F00) as usize >> 8] != (opcode & 0x00FF) as u8 {
                     self.pc += 2;
                 }
-                self.pc += 2;
             }
             0x5000 => {
                 // Skip next instruction if VX == VY
                 // println!("5XY0");
-                self.pc += 2;
                 if self.v[(opcode & 0x0F00) as usize >> 8]
                     == self.v[(opcode & 0x00F0) as usize >> 4]
                 {
@@ -217,7 +214,6 @@ impl<D: Display> CPU<D> {
                 // Store NN in vX
                 // println!("6XNN");
                 self.v[(opcode & 0x0F00) as usize >> 8] = (opcode & 0x00FF) as u8;
-                self.pc += 2;
             }
             0x7000 => {
                 // Add NN to vX
@@ -227,7 +223,6 @@ impl<D: Display> CPU<D> {
                 // println!("x: {}, add: {}", x, add);
                 // Wrapping add to handle overflow correctly
                 self.v[x] = self.v[x].wrapping_add(add);
-                self.pc += 2;
             }
             0x8000 => match opcode & 0xF {
                 0x0 => {
@@ -235,28 +230,24 @@ impl<D: Display> CPU<D> {
                     // println!("8XY0");
                     self.v[(opcode & 0x0F00) as usize >> 8] =
                         self.v[(opcode & 0x00F0) as usize >> 4];
-                    self.pc += 2;
                 }
                 0x1 => {
                     // store VY | VX in VX
                     // println!("8XY1");
                     self.v[(opcode & 0x0F00) as usize >> 8] |=
                         self.v[(opcode & 0x00F0) as usize >> 4];
-                    self.pc += 2;
                 }
                 0x2 => {
                     // store VY & VX in VX
                     // println!("8XY2");
                     self.v[(opcode & 0x0F00) as usize >> 8] &=
                         self.v[(opcode & 0x00F0) as usize >> 4];
-                    self.pc += 2;
                 }
                 0x3 => {
                     // store VY xor VX in VX
                     // println!("8XY3");
                     self.v[(opcode & 0x0F00) as usize >> 8] ^=
                         self.v[(opcode & 0x00F0) as usize >> 4];
-                    self.pc += 2;
                 }
                 0x4 => {
                     // Add VY to VX
@@ -267,7 +258,6 @@ impl<D: Display> CPU<D> {
                     let (result, overflow) = self.v[x].overflowing_add(self.v[y]);
                     self.v[x] = result;
                     self.v[0xF] = if overflow { 0x01 } else { 0x00 };
-                    self.pc += 2;
                 }
                 0x5 => {
                     // println!("8XY5");
@@ -278,7 +268,6 @@ impl<D: Display> CPU<D> {
                     let (result, borrow) = self.v[x].overflowing_sub(self.v[y]);
                     self.v[x] = result;
                     self.v[0xF] = if borrow { 0x00 } else { 0x01 };
-                    self.pc += 2;
                 }
                 0x6 => {
                     // Store vy >> 1 in vx. Set vf to LSB of vy before shift
@@ -287,7 +276,6 @@ impl<D: Display> CPU<D> {
                     let y = (opcode & 0x00F0) as usize >> 4;
                     self.v[0xF] = self.v[y] & 0x01;
                     self.v[x] = self.v[y] >> 1;
-                    self.pc += 2;
                 }
                 0x7 => {
                     // Set vX = Vy - Vx, set VF to !borrowed
@@ -297,7 +285,6 @@ impl<D: Display> CPU<D> {
                     let (result, borrow) = self.v[y].overflowing_sub(self.v[x]);
                     self.v[x] = result;
                     self.v[0xF] = if borrow { 0x00 } else { 0x01 };
-                    self.pc += 2;
                 }
                 0xE => {
                     // Store vy << 1 in vx. Set vf to most significant bit of vy before shift.
@@ -306,7 +293,6 @@ impl<D: Display> CPU<D> {
                     let y = (opcode & 0x00F0) as usize >> 4;
                     self.v[0xF] = self.v[y] >> 7;
                     self.v[x] = self.v[y] << 1;
-                    self.pc += 2;
                 }
                 _ => {
                     println!("Unknown opcode: 0x{:x}", opcode);
@@ -321,13 +307,11 @@ impl<D: Display> CPU<D> {
                 if self.v[x] != self.v[y] {
                     self.pc += 2;
                 }
-                self.pc += 2;
             }
             0xA000 => {
                 // ANNN: Sets I to address NNN
                 // println!("ANNN");
                 self.i = opcode & 0x0FFF;
-                self.pc += 2;
             }
             0xB000 => {
                 // Jump to NNN + v0
@@ -340,7 +324,6 @@ impl<D: Display> CPU<D> {
                 let x = (opcode & 0x0F00) as usize >> 8;
                 let nn = (opcode & 0x00FF) as u8;
                 self.v[x] = rand::random::<u8>() & nn;
-                self.pc += 2;
             }
             0xD000 => {
                 // println!("DXYN");
@@ -351,7 +334,6 @@ impl<D: Display> CPU<D> {
                 // * Set VF to 1 if any set pixels are changed to unset, else 0
                 // * To be visible on the screen, the vX register must be
                 //      between 00 and 3F. vY must be between 00 and 1F
-                self.pc += 2;
                 let x = self.v[(opcode & 0x0F00) as usize >> 8] as usize;
                 let y = self.v[(opcode & 0x00F0) as usize >> 4] as usize;
                 let n = (opcode & 0x000F) as usize;
@@ -392,7 +374,6 @@ impl<D: Display> CPU<D> {
                     if self.keys[val as usize] == 1 {
                         self.pc += 2;
                     }
-                    self.pc += 2;
                 }
                 0xA1 => {
                     // println!("EXA1");
@@ -400,7 +381,6 @@ impl<D: Display> CPU<D> {
                     if self.keys[val as usize] == 0 {
                         self.pc += 2;
                     }
-                    self.pc += 2;
                 }
                 _ => {
                     println!("Unknown opcode: 0x{:x}", opcode);
@@ -412,7 +392,6 @@ impl<D: Display> CPU<D> {
                     // store delay timer in vX
                     // println!("FX07");
                     self.v[(opcode & 0x0F00) as usize >> 8] = self.delay_timer;
-                    self.pc += 2;
                 }
                 0x0A => {
                     // Wait for keypress and store in vX
@@ -423,26 +402,25 @@ impl<D: Display> CPU<D> {
                             self.v[(opcode & 0x0F00) as usize >> 8] = key as u8;
                             self.pc += 2;
                         }
-                        None => {}
+                        None => {
+                            self.pc -= 2;
+                        }
                     }
                 }
                 0x15 => {
                     // Set delay timer to vX
                     // println!("FX15");
                     self.delay_timer = self.v[(opcode & 0x0F00) as usize >> 8];
-                    self.pc += 2;
                 }
                 0x18 => {
                     // Set sound timer to vX
                     // println!("FX18");
                     self.sound_timer = self.v[(opcode & 0x0F00) as usize >> 8];
-                    self.pc += 2;
                 }
                 0x1E => {
                     // Add vX to I
                     // println!("FX1E");
                     self.i += self.v[(opcode & 0x0F00) as usize >> 8] as u16;
-                    self.pc += 2;
                 }
                 0x29 => {
                     // Set I to location of sprite for digit vX
@@ -453,7 +431,6 @@ impl<D: Display> CPU<D> {
                     // println!("FX29");
                     self.i =
                         self.v[(opcode & 0x0F00) as usize >> 8] as u16 * 5 + FONTSET_START as u16;
-                    self.pc += 2;
                 }
                 0x33 => {
                     // Store binary-coded decimal representation of vX at I, I+1, I+2
@@ -466,7 +443,6 @@ impl<D: Display> CPU<D> {
                     self.memory[self.i as usize] = val / 100;
                     self.memory[(self.i + 1) as usize] = (val / 10) % 10;
                     self.memory[(self.i + 2) as usize] = val % 10;
-                    self.pc += 2;
                 }
                 0x55 => {
                     // Store v0 to vX in memory starting at I
@@ -475,7 +451,6 @@ impl<D: Display> CPU<D> {
                     for i in 0..=x {
                         self.memory[(self.i + i as u16) as usize] = self.v[i];
                     }
-                    self.pc += 2;
                 }
                 0x65 => {
                     // Load v0 to vX from memory starting at I
@@ -484,7 +459,6 @@ impl<D: Display> CPU<D> {
                     for i in 0..=x {
                         self.v[i] = self.memory[(self.i + i as u16) as usize];
                     }
-                    self.pc += 2;
                 }
                 _ => {
                     println!("Unknown opcode: 0x{:x}", opcode);
