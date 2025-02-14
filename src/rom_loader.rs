@@ -26,6 +26,18 @@ impl RomLoader for HexRomLoader {
     }
 }
 
+// Reads .ch8 files which are just the raw bytes
+pub struct Ch8RomLoader;
+
+impl RomLoader for Ch8RomLoader {
+    fn read(file: &Path) -> Vec<u8> {
+        let mut buffer = Vec::<u8>::new();
+        let mut f = File::open(file).unwrap();
+        f.read_to_end(&mut buffer).unwrap();
+        buffer
+    }
+}
+
 #[cfg(test)]
 
 mod tests {

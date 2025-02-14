@@ -5,6 +5,7 @@ mod rom_loader;
 
 use crate::rom_loader::RomLoader;
 use crate::rom_loader::HexRomLoader;
+use crate::rom_loader::Ch8RomLoader;
 
 use display::MiniFBDisplay;
 use minifb::{Window, WindowOptions};
@@ -51,8 +52,12 @@ fn main() {
     if filename.ends_with(".hex") {
         program = HexRomLoader::read(Path::new(filename));
     }
+    else if filename.ends_with(".ch8") || filename.ends_with(".8o") {
+        program = Ch8RomLoader::read(Path::new(filename));
+    }
     else {
         eprintln!("Unsupported file type: {}", filename);
+        return;
     }
     let window = get_window();
     let display = MiniFBDisplay::new(window);

@@ -162,8 +162,8 @@ impl<D: Display> CPU<D> {
                 // TODO: Stack pushing popping tests
                 0xEE => {
                     println!("return");
-                    self.pc = self.stack[self.sp as usize];
                     self.sp -= 1;
+                    self.pc = self.stack[self.sp as usize];
                 }
                 _ => {
                     println!("Unknown opcode: 0x{:x}", opcode);
@@ -178,7 +178,7 @@ impl<D: Display> CPU<D> {
             0x2000 => {
                 // Call subroutine at NNN
                 println!("2NNN");
-                self.stack[self.sp as usize] = self.pc;
+                self.stack[self.sp as usize] = self.pc + 2;
                 self.sp += 1;
                 self.pc = opcode & 0x0FFF;
             }
