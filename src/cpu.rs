@@ -2,9 +2,19 @@ use core::panic;
 use rand;
 
 use crate::fontset::FONTSET;
+use std::cmp::min;
 
 const PROGRAM_START: u16 = 0x200;
 const MEMORY_SIZE: usize = 4096;
+
+/*
+   Notes on Sprites:
+   * One byte corresponds to one row of a sprite
+   * 1 means white
+   * All sprites are drawn using XOR mode
+     * During drawing, the sprite data is XOR'd with the current screen
+     * To erase a sprite, draw it again
+*/
 
 #[derive(Debug)]
 pub struct CPU {
@@ -252,8 +262,36 @@ impl CPU {
                 self.pc += 2;
             }
             0xD000 => {
-                // Draw sprite
-                println!("DXYN")
+                println!("DXYN");
+                // Draw sprite DXYN
+                // Notes:
+                // * Draw at coordinates vX, vY
+                // * Use N bytes starting at address I
+                // * Set VF to 1 if any set pixels are changed to unset, else 0
+                // * To be visible on the screen, the vX register must be
+                //      between 00 and 3F. vY must be between 00 and 1F
+                let x = self.v[(opcode & 0x0F00) as usize >> 8] as usize;
+                let y = self.v[(opcode & 0x00F0) as usize >> 4] as usize;
+                let n = (opcode & 0x000F) as usize;
+                let addr = self.i as usize;
+                // Height is the min of N and 1F - vY
+                let height = min(n, 0x1F - y);
+                let max_col = min(8, 0x3F - x);
+                self.v[0xF] = 0;
+
+                for row in 0..height {
+                    let sprite = self.memory[addr + row];
+                    for col in 0..max_col {
+                        let pixel = sprite & (0x80 >> col);
+                        let idx: usize = (x + col + ((y + row) * 64)) as usize;
+                        if pixel != 0 {
+                            if self.gfx[idx] == 1 {
+                                self.v[0xF] = 1;
+                            }
+                            self.gfx[idx] ^= 1;
+                        }
+                    }
+                }
             }
             0xE000 => match opcode & 0x00FF {
                 // TODO: Combine code for these two
@@ -319,7 +357,7 @@ impl CPU {
                     // * Fontset is between 0x050-0x0A0
                     // * Each character is 5 bytes long
                     println!("FX29");
-                    self.i = self.v[(opcode & 0x0F00) as usize >> 4] as u16 * 5;
+                    self.i = self.v[(opcode & 0x0F00) as usize >> 4] as u16 * 5 + 0x50;
                     self.pc += 2;
                 }
                 0x33 => {
