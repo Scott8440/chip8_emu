@@ -71,7 +71,17 @@ impl<D: Display> CPU<D> {
     }
 
     pub fn run(&mut self) {
+        let frame_time = std::time::Duration::from_micros(1_000_000 / 60);
+        let mut last_timer_update = std::time::Instant::now();
+
         while self.display.is_open() {
+            let cycle_start = std::time::Instant::now();
+
+            // Update keys
+            for i in 0..16 {
+                self.keys[i] = if self.display.is_key_down(i) { 1 } else { 0 };
+            }
+
             if !self.cycle() {
                 break;
             }
@@ -79,17 +89,21 @@ impl<D: Display> CPU<D> {
             // Update display
             self.display.update(&self.gfx, SCREEN_WIDTH, SCREEN_HEIGHT);
 
-            // Decrement timers
-            if self.delay_timer > 0 {
-                self.delay_timer -= 1;
-            }
-            if self.sound_timer > 0 {
-                // TODO: Play sound here
-                self.sound_timer -= 1;
+            // Update timers at 60Hz
+            if last_timer_update.elapsed() >= frame_time {
+                if self.delay_timer > 0 {
+                    self.delay_timer -= 1;
+                }
+                if self.sound_timer > 0 {
+                    self.sound_timer -= 1;
+                }
+                last_timer_update = std::time::Instant::now();
             }
 
-            // Maintain ~60Hz
-            std::thread::sleep(std::time::Duration::from_millis(1000 / 60));
+            // Sleep for remaining frame time
+            if let Some(sleep_time) = frame_time.checked_sub(cycle_start.elapsed()) {
+                std::thread::sleep(sleep_time);
+            }
         }
     }
 
