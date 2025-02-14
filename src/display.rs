@@ -12,9 +12,11 @@ pub struct MiniFBDisplay {
 
 impl MiniFBDisplay {
     pub fn new(window: Window) -> Self {
+        let size = window.get_size();
+        let buffer = vec![0; size.0 * size.1];
         MiniFBDisplay {
             window,
-            buffer: vec![0; window.get_size().0 * window.get_size().1],
+            buffer,
         }
     }
 }
