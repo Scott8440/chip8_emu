@@ -25,15 +25,19 @@ fn get_window() -> Window {
 fn main() {
     let window = get_window();
     let display = MiniFBDisplay::new(window);
-    
-    // Create an infinite loop program:
-    // 0x200: 0x6001 - Set V0 to 1
-    // 0x202: 0x7001 - Add 1 to V0
-    // 0x204: 0x1202 - Jump back to 0x202
+
     let mut program: Vec<u8> = vec![
-        0x60, 0x01,  // Set V0 = 1
-        0x70, 0x01,  // Add 1 to V0
-        0x12, 0x02   // Jump to 0x202
+        0x60, 0x0F, // Set V0 = 2
+        0x62, 0x02, // Set V0 = 0
+        0x61, 0x00, // v1 is x coordinate, set to 0
+        0xF0, 0x29, // Load sprite for digit 0 into I
+        0xD1, 0x25, // Draw sprite at (v1, v2) with height 5
+        // 0x60, 0x03, // Set V0 = 3
+        // 0xF0, 0x29, // Load sprite for digit 0 into I
+        0x71, 0x05, // v1 is x coordinate, Add 5
+        0xD1, 0x25, // Draw sprite at (v1, v2) with height 5
+        // 0x00, 0xE0, // Clear screen
+        0x12, 0x0A, // Jump to start
     ];
 
     let mut cpu = cpu::CPU::new(display);

@@ -52,7 +52,7 @@ pub struct CPU<D: Display> {
     pub keys: [u8; 16],
 }
 
-impl CPU {
+impl<D: Display> CPU<D> {
     pub fn new(display: D) -> CPU<D> {
         CPU {
             display,
@@ -78,11 +78,6 @@ impl CPU {
 
             // Update display
             self.display.update(&self.gfx, SCREEN_WIDTH, SCREEN_HEIGHT);
-
-            // Update keys
-            for i in 0..16 {
-                self.keys[i] = if self.display.is_key_down(i) { 1 } else { 0 };
-            }
 
             // Decrement timers
             if self.delay_timer > 0 {
@@ -137,6 +132,8 @@ impl CPU {
     }
 
     pub fn cycle(&mut self) -> bool {
+        // print self.pc in hex
+        println!("pc: 0x{:x}", self.pc);
         // Fetch opcode
         // TODO: Does opcode need to be a member variable?
         self.opcode = (self.memory[self.pc as usize] as u16) << 8
@@ -480,6 +477,8 @@ impl CPU {
 
 #[cfg(test)]
 mod tests {
+
+    use crate::display::NullDisplay;
 
     use super::*;
     use pretty_assertions::assert_eq;

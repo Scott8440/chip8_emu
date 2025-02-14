@@ -3,7 +3,6 @@ use minifb::Window;
 pub trait Display {
     fn update(&mut self, buffer: &[u8], width: usize, height: usize);
     fn is_open(&self) -> bool;
-    fn is_key_down(&self, key: usize) -> bool;
 }
 
 pub struct MiniFBDisplay {
@@ -31,8 +30,9 @@ impl NullDisplay {
 
 impl Display for NullDisplay {
     fn update(&mut self, _buffer: &[u8], _width: usize, _height: usize) {}
-    fn is_open(&self) -> bool { true }
-    fn is_key_down(&self, _key: usize) -> bool { false }
+    fn is_open(&self) -> bool {
+        true
+    }
 }
 
 impl Display for MiniFBDisplay {
@@ -41,25 +41,12 @@ impl Display for MiniFBDisplay {
         for (i, &pixel) in gfx.iter().enumerate() {
             self.buffer[i] = if pixel == 0 { 0 } else { 0xFFFFFFFF };
         }
-        self.window.update_with_buffer(&self.buffer, width, height).unwrap();
+        self.window
+            .update_with_buffer(&self.buffer, width, height)
+            .unwrap();
     }
 
     fn is_open(&self) -> bool {
         self.window.is_open()
-    }
-
-    fn is_key_down(&self, key: usize) -> bool {
-        use minifb::Key;
-        let keys = [
-            Key::X, Key::Key1, Key::Key2, Key::Key3,
-            Key::Q, Key::W, Key::E, Key::A,
-            Key::S, Key::D, Key::Z, Key::C,
-            Key::Key4, Key::R, Key::F, Key::V,
-        ];
-        if key < keys.len() {
-            self.window.is_key_down(keys[key])
-        } else {
-            false
-        }
     }
 }
