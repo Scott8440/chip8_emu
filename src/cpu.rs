@@ -168,7 +168,7 @@ impl<D: Display> CPU<D> {
                     self.pc = self.stack[self.sp as usize];
                 }
                 _ => {
-                    // println!("Unknown opcode: 0x{:x}", opcode);
+                    println!("Unknown opcode: 0x{:x}", opcode);
                     return false;
                 }
             },
@@ -202,6 +202,10 @@ impl<D: Display> CPU<D> {
                 }
             }
             0x5000 => {
+                if opcode & 0x000F != 0x0000 {
+                    println!("Unknown opcode: 0x{:x}", opcode);
+                    return false;
+                }
                 // Skip next instruction if VX == VY
                 // println!("5XY0");
                 if self.v[(opcode & 0x0F00) as usize >> 8]
@@ -302,6 +306,10 @@ impl<D: Display> CPU<D> {
             0x9000 => {
                 // Skip next instruction if vX != vY
                 // println!("9XY0");
+                if opcode & 0x000F != 0x0000 {
+                    println!("Unknown opcode: 0x{:x}", opcode);
+                    return false;
+                }
                 let x = (opcode & 0x0F00) as usize >> 8;
                 let y: usize = (opcode & 0x00F0) as usize >> 4;
                 if self.v[x] != self.v[y] {
