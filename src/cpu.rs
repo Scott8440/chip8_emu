@@ -562,7 +562,7 @@ mod tests {
         cpu.load(program.clone());
         cpu.cycle();
         assert!(cpu.sp == 1);
-        assert!(cpu.stack[0] == 0x200);
+        assert!(cpu.stack[0] == 0x202);
         assert!(cpu.pc == 0x1234 & 0x0FFF);
     }
 
