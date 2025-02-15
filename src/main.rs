@@ -10,8 +10,6 @@ use crate::rom_loader::RomLoader;
 use display::MiniFBDisplay;
 use minifb::{Window, WindowOptions};
 use std::env;
-use std::fs::File;
-use std::io::Read;
 use std::path::Path;
 
 fn get_window() -> Window {
