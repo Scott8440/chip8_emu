@@ -508,16 +508,17 @@ mod tests {
     use super::*;
     use pretty_assertions::assert_eq;
 
-    fn setup() -> CPU<NullDisplay> {
+    fn setup(prog: Vec<u8>) -> CPU<NullDisplay> {
         let display = NullDisplay::new();
         let mut cpu = CPU::new(display);
         cpu.initialize();
+        cpu.load(prog);
         cpu
     }
 
     #[test]
     fn test_initialization() {
-        let cpu = setup();
+        let cpu = setup(vec![]);
         assert_eq!(cpu.pc, PROGRAM_START);
         assert_eq!(cpu.opcode, 0);
         assert_eq!(cpu.i, 0);
@@ -526,9 +527,8 @@ mod tests {
 
     #[test]
     fn test_load_program() {
-        let mut cpu = setup();
         let program = vec![0xA2, 0xB4]; // ANNN instruction
-        cpu.load(program.clone());
+        let cpu = setup(program.clone());
 
         // Verify program was loaded at correct address
         assert_eq!(cpu.memory[PROGRAM_START as usize], program[0]);
@@ -537,9 +537,7 @@ mod tests {
 
     #[test]
     fn test_clear_screen() {
-        let mut cpu = setup();
-        let program = vec![0x00, 0xE0];
-        cpu.load(program.clone());
+        let mut cpu = setup(vec![0x00, 0xE0]);
         cpu.gfx[0] = 1;
         cpu.gfx[64] = 1;
         cpu.cycle(0, 0);
@@ -549,18 +547,14 @@ mod tests {
 
     #[test]
     fn test_jump() {
-        let mut cpu = setup();
-        let program = vec![0x12, 0x34];
-        cpu.load(program.clone());
+        let mut cpu = setup(vec![0x12, 0x34]);
         cpu.cycle(0, 0);
         assert!(cpu.pc == 0x1234 & 0x0FFF);
     }
 
     #[test]
     fn test_call_subroutine() {
-        let mut cpu = setup();
-        let program = vec![0x22, 0x34];
-        cpu.load(program.clone());
+        let mut cpu = setup(vec![0x22, 0x34]);
         cpu.cycle(0, 0);
         assert!(cpu.sp == 1);
         assert!(cpu.stack[0] == 0x202);
@@ -569,10 +563,8 @@ mod tests {
 
     #[test]
     fn test_skip_equal() {
-        let mut cpu = setup();
         let program = vec![0x30, 0x11];
-
-        cpu.load(program.clone());
+        let mut cpu = setup(program.clone());
         cpu.v[0] = 0x11;
         assert!(cpu.pc == 0x200, "got 0x{:X}", cpu.pc);
         cpu.cycle(0, 0);
@@ -586,10 +578,9 @@ mod tests {
 
     #[test]
     fn test_skip_not_equal() {
-        let mut cpu = setup();
         let program = vec![0x40, 0x11];
+        let mut cpu = setup(program.clone());
 
-        cpu.load(program.clone());
         cpu.v[0] = 0x11;
         cpu.cycle(0, 0);
         assert!(cpu.pc == 0x202);
@@ -602,9 +593,8 @@ mod tests {
 
     #[test]
     fn test_skip_equal_registers() {
-        let mut cpu = setup();
         let program = vec![0x51, 0x20];
-        cpu.load(program.clone());
+        let mut cpu = setup(program.clone());
         cpu.v[1] = 0x01;
         cpu.v[2] = 0x00;
 
@@ -621,18 +611,14 @@ mod tests {
 
     #[test]
     fn test_set_vx() {
-        let mut cpu = setup();
-        let program = vec![0x60, 0x12];
-        cpu.load(program.clone());
+        let mut cpu = setup(vec![0x60, 0x12]);
         cpu.cycle(0, 0);
         assert!(cpu.v[0] == 0x12);
     }
 
     #[test]
     fn test_add_vx() {
-        let mut cpu = setup();
-        let program = vec![0x70, 0x12, 0x70, 0x12];
-        cpu.load(program.clone());
+        let mut cpu = setup(vec![0x70, 0x12, 0x70, 0x12]);
         cpu.cycle(0, 0);
         assert!(cpu.v[0] == 0x12);
         cpu.cycle(0, 0);
@@ -641,9 +627,7 @@ mod tests {
 
     #[test]
     fn test_set_vx_vy() {
-        let mut cpu = setup();
-        let program = vec![0x80, 0x10];
-        cpu.load(program.clone());
+        let mut cpu = setup(vec![0x80, 0x10]);
         cpu.v[0] = 0x10;
         cpu.v[1] = 0x20;
         cpu.cycle(0, 0);
@@ -652,19 +636,15 @@ mod tests {
 
     #[test]
     fn test_store_vx() {
-        let mut cpu = setup();
-        let program = vec![0x61, 0x23];
-        cpu.load(program.clone());
-
+        let mut cpu = setup(vec![0x61, 0x23]);
         cpu.cycle(0, 0);
         assert!(cpu.v[1] == 0x23);
     }
 
     #[test]
     fn test_shift_vy_to_vx() {
-        let mut cpu = setup();
         let program = vec![0x80, 0x1E];
-        cpu.load(program.clone());
+        let mut cpu = setup(program.clone());
         cpu.v[1] = 0b00000100;
         cpu.cycle(0, 0);
         assert!(cpu.v[0] == 0b00001000);
@@ -682,10 +662,7 @@ mod tests {
 
     #[test]
     fn test_keypress() {
-        let mut cpu = setup();
-        let program = vec![0xE0, 0x9E, 0x00, 0x00, 0xE0, 0xA1];
-        cpu.load(program.clone());
-
+        let mut cpu = setup(vec![0xE0, 0x9E, 0x00, 0x00, 0xE0, 0xA1]);
         cpu.keys[0] = 1;
         cpu.cycle(0, 0);
         assert!(cpu.pc == PROGRAM_START + 4, "got 0x{:X}", cpu.pc);
@@ -696,9 +673,7 @@ mod tests {
 
     #[test]
     fn test_get_font_address() {
-        let mut cpu = setup();
-        let program = vec![0xF0, 0x29];
-        cpu.load(program.clone());
+        let mut cpu = setup(vec![0xF0, 0x29]);
         cpu.v[0] = 0x3;
         cpu.cycle(0, 0);
         assert!(cpu.i == (0x3 * 5) + FONTSET_START as u16);
@@ -706,7 +681,7 @@ mod tests {
 
     #[test]
     fn test_initialize() {
-        let mut cpu = setup();
+        let mut cpu = setup(vec![]);
         cpu.v[0] = 0x1;
         cpu.i = 0x2;
         cpu.sp = 0x3;
@@ -738,9 +713,8 @@ mod tests {
 
     #[test]
     fn test_8xye() {
-        let mut cpu = setup();
         let program = vec![0x80, 0x1E];
-        cpu.load(program.clone());
+        let mut cpu = setup(program.clone());
         cpu.v[1] = 0b00000100;
         cpu.v[0] = 0b00000000;
         cpu.cycle(0, 0);
@@ -760,11 +734,8 @@ mod tests {
 
     #[test]
     fn test_draw_sprite() {
-        let mut cpu = setup();
+        let mut cpu = setup(vec![0xD0, 0x05, 0xD0, 0x05]);
         // Test drawing sprite
-        cpu.initialize();
-        let program = vec![0xD0, 0x05, 0xD0, 0x05];
-        cpu.load(program.clone());
         cpu.v[0] = 0x00;
         cpu.i = 0x50; // Sprite for 0
         cpu.cycle(0, 0);
