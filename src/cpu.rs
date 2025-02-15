@@ -542,7 +542,7 @@ mod tests {
         cpu.load(program.clone());
         cpu.gfx[0] = 1;
         cpu.gfx[64] = 1;
-        cpu.cycle();
+        cpu.cycle(0, 0);
         assert!(cpu.gfx.iter().all(|&x| x == 0));
         assert!(cpu.pc == PROGRAM_START + 2);
     }
@@ -552,7 +552,7 @@ mod tests {
         let mut cpu = setup();
         let program = vec![0x12, 0x34];
         cpu.load(program.clone());
-        cpu.cycle();
+        cpu.cycle(0, 0);
         assert!(cpu.pc == 0x1234 & 0x0FFF);
     }
 
@@ -561,7 +561,7 @@ mod tests {
         let mut cpu = setup();
         let program = vec![0x22, 0x34];
         cpu.load(program.clone());
-        cpu.cycle();
+        cpu.cycle(0, 0);
         assert!(cpu.sp == 1);
         assert!(cpu.stack[0] == 0x202);
         assert!(cpu.pc == 0x1234 & 0x0FFF);
@@ -575,12 +575,12 @@ mod tests {
         cpu.load(program.clone());
         cpu.v[0] = 0x11;
         assert!(cpu.pc == 0x200, "got 0x{:X}", cpu.pc);
-        cpu.cycle();
+        cpu.cycle(0, 0);
         assert!(cpu.pc == 0x204, "got 0x{:X}", cpu.pc);
 
         cpu.initialize();
         cpu.load(program.clone());
-        cpu.cycle();
+        cpu.cycle(0, 0);
         assert!(cpu.pc == 0x202);
     }
 
@@ -591,12 +591,12 @@ mod tests {
 
         cpu.load(program.clone());
         cpu.v[0] = 0x11;
-        cpu.cycle();
+        cpu.cycle(0, 0);
         assert!(cpu.pc == 0x202);
 
         cpu.initialize();
         cpu.load(program.clone());
-        cpu.cycle();
+        cpu.cycle(0, 0);
         assert!(cpu.pc == 0x204);
     }
 
@@ -608,14 +608,14 @@ mod tests {
         cpu.v[1] = 0x01;
         cpu.v[2] = 0x00;
 
-        cpu.cycle();
+        cpu.cycle(0, 0);
         assert!(cpu.pc == 0x202);
 
         cpu.initialize();
         cpu.load(program.clone());
         cpu.v[1] = 0x01;
         cpu.v[2] = 0x01;
-        cpu.cycle();
+        cpu.cycle(0, 0);
         assert!(cpu.pc == 0x204);
     }
 
@@ -624,7 +624,7 @@ mod tests {
         let mut cpu = setup();
         let program = vec![0x60, 0x12];
         cpu.load(program.clone());
-        cpu.cycle();
+        cpu.cycle(0, 0);
         assert!(cpu.v[0] == 0x12);
     }
 
@@ -633,9 +633,9 @@ mod tests {
         let mut cpu = setup();
         let program = vec![0x70, 0x12, 0x70, 0x12];
         cpu.load(program.clone());
-        cpu.cycle();
+        cpu.cycle(0, 0);
         assert!(cpu.v[0] == 0x12);
-        cpu.cycle();
+        cpu.cycle(0, 0);
         assert!(cpu.v[0] == 0x12 + 0x12);
     }
 
@@ -646,7 +646,7 @@ mod tests {
         cpu.load(program.clone());
         cpu.v[0] = 0x10;
         cpu.v[1] = 0x20;
-        cpu.cycle();
+        cpu.cycle(0, 0);
         assert!(cpu.v[0] == 0x20);
     }
 
@@ -656,7 +656,7 @@ mod tests {
         let program = vec![0x61, 0x23];
         cpu.load(program.clone());
 
-        cpu.cycle();
+        cpu.cycle(0, 0);
         assert!(cpu.v[1] == 0x23);
     }
 
@@ -666,7 +666,7 @@ mod tests {
         let program = vec![0x80, 0x1E];
         cpu.load(program.clone());
         cpu.v[1] = 0b00000100;
-        cpu.cycle();
+        cpu.cycle(0, 0);
         assert!(cpu.v[0] == 0b00001000);
         assert!(cpu.v[0xF] == 0);
         assert!(cpu.v[1] == 0b00000100);
@@ -674,7 +674,7 @@ mod tests {
         cpu.initialize();
         cpu.load(program.clone());
         cpu.v[1] = 0b10000100;
-        cpu.cycle();
+        cpu.cycle(0, 0);
         assert!(cpu.v[0] == 0b00001000);
         assert!(cpu.v[0xF] == 1);
         assert!(cpu.v[1] == 0b10000100);
@@ -687,10 +687,10 @@ mod tests {
         cpu.load(program.clone());
 
         cpu.keys[0] = 1;
-        cpu.cycle();
+        cpu.cycle(0, 0);
         assert!(cpu.pc == PROGRAM_START + 4, "got 0x{:X}", cpu.pc);
         cpu.keys[0] = 0;
-        cpu.cycle();
+        cpu.cycle(0, 0);
         assert!(cpu.pc == PROGRAM_START + 8, "got 0x{:X}", cpu.pc);
     }
 
@@ -700,7 +700,7 @@ mod tests {
         let program = vec![0xF0, 0x29];
         cpu.load(program.clone());
         cpu.v[0] = 0x3;
-        cpu.cycle();
+        cpu.cycle(0, 0);
         assert!(cpu.i == (0x3 * 5) + FONTSET_START as u16);
     }
 
@@ -743,7 +743,7 @@ mod tests {
         cpu.load(program.clone());
         cpu.v[1] = 0b00000100;
         cpu.v[0] = 0b00000000;
-        cpu.cycle();
+        cpu.cycle(0, 0);
         assert!(cpu.v[0] == 0b00001000);
         assert!(cpu.v[1] == 0b00000100);
         assert!(cpu.v[0xF] == 0);
@@ -752,7 +752,7 @@ mod tests {
         cpu.load(program.clone());
         cpu.v[1] = 0b10000100;
         cpu.v[0] = 0b00000000;
-        cpu.cycle();
+        cpu.cycle(0, 0);
         assert!(cpu.v[0] == 0b00001000);
         assert!(cpu.v[1] == 0b10000100);
         assert!(cpu.v[0xF] == 1);
@@ -767,7 +767,7 @@ mod tests {
         cpu.load(program.clone());
         cpu.v[0] = 0x00;
         cpu.i = 0x50; // Sprite for 0
-        cpu.cycle();
+        cpu.cycle(0, 0);
         assert!(cpu.gfx[0] == 1);
         assert!(cpu.gfx[1] == 1);
         assert!(cpu.gfx[2] == 1);
@@ -783,7 +783,7 @@ mod tests {
         assert!(cpu.gfx[2 + SCREEN_WIDTH * 4] == 1);
         assert!(cpu.gfx[3 + SCREEN_WIDTH * 4] == 1);
         assert!(cpu.v[0xF] == 0);
-        cpu.cycle();
+        cpu.cycle(0, 0);
         assert!(cpu.gfx.iter().all(|&x| x == 0));
         assert!(cpu.v[0xF] == 1);
 
@@ -794,7 +794,7 @@ mod tests {
         cpu.v[0] = SCREEN_WIDTH as u8 - 4; // Just enough to fit sprite
         cpu.v[1] = 0x01;
         cpu.i = 0x50;
-        cpu.cycle();
+        cpu.cycle(0, 0);
         assert!(cpu.gfx.iter().take(SCREEN_WIDTH).all(|&x| x == 0));
         assert!(cpu.gfx[SCREEN_WIDTH - 4 + SCREEN_WIDTH] == 1);
         assert!(cpu.gfx[SCREEN_WIDTH - 3 + SCREEN_WIDTH] == 1);
@@ -809,7 +809,7 @@ mod tests {
         cpu.v[0] = 0x00;
         cpu.v[1] = SCREEN_HEIGHT as u8 - 1;
         cpu.i = 0x50;
-        cpu.cycle();
+        cpu.cycle(0, 0);
 
         assert!(cpu
             .gfx
