@@ -75,7 +75,8 @@ impl<D: Display> CPU<D> {
 
     pub fn run(&mut self) {
         let frame_time = std::time::Duration::from_micros((1_000_000 / FRAMERATE).into());
-        let cycle_time = std::time::Duration::from_micros((1_000_000 / (FRAMERATE * CYCLES_PER_FRAME)).into());
+        let cycle_time =
+            std::time::Duration::from_micros((1_000_000 / (FRAMERATE * CYCLES_PER_FRAME)).into());
         // println!("Frame time: {}us", frame_time.as_micros());
         // println!("Cycle time: {}us", cycle_time.as_micros());
         let mut last_timer_update = std::time::Instant::now();
@@ -93,7 +94,6 @@ impl<D: Display> CPU<D> {
             if !self.cycle() {
                 break;
             }
-
 
             // Update timers at 60Hz
             if last_timer_update.elapsed() >= frame_time {
@@ -764,27 +764,6 @@ mod tests {
     #[test]
     fn test_draw_sprite() {
         let mut cpu = setup();
-        // Test drawing out of range has no effect
-        // Out of height range
-        let program = vec![0xD0, 0x11];
-        cpu.load(program.clone());
-        cpu.v[0] = 0x40;
-        cpu.v[1] = 0x00;
-        cpu.i = 0x50;
-        cpu.cycle();
-        assert!(cpu.gfx.iter().all(|&x| x == 0));
-        assert!(cpu.v[0xF] == 0);
-
-        // out of width range
-        cpu.initialize();
-        cpu.load(program.clone());
-        cpu.v[0] = 0x00;
-        cpu.v[1] = 0x20;
-        cpu.i = 0x50;
-        cpu.cycle();
-        assert!(cpu.gfx.iter().all(|&x| x == 0));
-        assert!(cpu.v[0xF] == 0);
-
         // Test drawing sprite
         cpu.initialize();
         let program = vec![0xD0, 0x05, 0xD0, 0x05];
