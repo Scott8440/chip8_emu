@@ -1,8 +1,8 @@
 use core::panic;
 use rand;
 
-use crate::display::Display;
 use crate::fontset::FONTSET;
+use emu_abstractions::display::Display;
 
 const PROGRAM_START: u16 = 0x200;
 const MEMORY_SIZE: usize = 4096;
@@ -16,6 +16,8 @@ const FRAMERATE: u32 = 60;
 const CYCLES_PER_FRAME: u32 = 11;
 
 const SHIFT_GLITCH: bool = true;
+// TODO: Figure out how to match framerate/cylces_per_frame with
+//       choosing when to draw the sprite
 const DRAW_GLITCH: bool = true;
 
 /*
@@ -346,7 +348,7 @@ impl<D: Display> CPU<D> {
                 // * To be visible on the screen, the vX register must be
                 //      between 00 and 3F. vY must be between 00 and 1F
                 if DRAW_GLITCH {
-                    if time_since_frame > (frame_time / 30) {
+                    if time_since_frame > (frame_time / 20) {
                         self.pc -= 2;
                         return true;
                     }
@@ -500,7 +502,7 @@ impl<D: Display> CPU<D> {
 #[cfg(test)]
 mod tests {
 
-    use crate::display::NullDisplay;
+    use emu_abstractions::display::NullDisplay;
 
     use super::*;
     use pretty_assertions::assert_eq;

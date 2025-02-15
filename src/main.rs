@@ -1,5 +1,4 @@
 mod cpu;
-mod display;
 mod fontset;
 mod rom_loader;
 
@@ -7,7 +6,9 @@ use crate::rom_loader::Ch8RomLoader;
 use crate::rom_loader::HexRomLoader;
 use crate::rom_loader::RomLoader;
 
-use display::MiniFBDisplay;
+extern crate emu_abstractions;
+
+use emu_abstractions::display::MiniFBDisplay;
 use minifb::{Window, WindowOptions};
 use std::env;
 use std::path::Path;
