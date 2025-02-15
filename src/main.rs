@@ -3,9 +3,9 @@ mod display;
 mod fontset;
 mod rom_loader;
 
-use crate::rom_loader::RomLoader;
-use crate::rom_loader::HexRomLoader;
 use crate::rom_loader::Ch8RomLoader;
+use crate::rom_loader::HexRomLoader;
+use crate::rom_loader::RomLoader;
 
 use display::MiniFBDisplay;
 use minifb::{Window, WindowOptions};
@@ -32,14 +32,6 @@ fn get_window() -> Window {
     .unwrap()
 }
 
-fn load_rom(filename: &str) -> Vec<u8> {
-    let mut file = File::open(filename).expect("Failed to open ROM file");
-    let mut buffer = Vec::new();
-    file.read_to_end(&mut buffer)
-        .expect("Failed to read ROM file");
-    buffer
-}
-
 fn main() {
     let args: Vec<String> = env::args().collect();
     if args.len() != 2 {
@@ -48,14 +40,12 @@ fn main() {
     }
 
     let filename = &args[1];
-    let mut program: Vec<u8> = Vec::<u8>::new();
+    let program;
     if filename.ends_with(".hex") {
         program = HexRomLoader::read(Path::new(filename));
-    }
-    else if filename.ends_with(".ch8") || filename.ends_with(".8o") {
+    } else if filename.ends_with(".ch8") || filename.ends_with(".8o") {
         program = Ch8RomLoader::read(Path::new(filename));
-    }
-    else {
+    } else {
         eprintln!("Unsupported file type: {}", filename);
         return;
     }
