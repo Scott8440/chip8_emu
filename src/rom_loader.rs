@@ -1,5 +1,5 @@
 use std::fs::File;
-use std::io::{self, Read};
+use std::io::Read;
 use std::path::Path;
 
 pub trait RomLoader {
@@ -67,5 +67,4 @@ mod tests {
 
         assert_eq!(expected_program, read_program);
     }
-
 }
