@@ -91,7 +91,7 @@ checksum = "75b325c5dbd37f80359721ad39aca5a29fb04c89279657cffdda8736d0c0b9d2"
 [[package]]
 name = "emu-abstractions"
 version = "0.1.0"
-source = "git+ssh://git@github.com/Scott8440/emu-abstractions.git#52a34ee1b0d26f034007e80be76a240a243f015a"
+source = "git+ssh://git@github.com/Scott8440/emu-abstractions.git#6d865ef649ad7ebeb8333b1095ecff5fa9449167"
 dependencies = [
  "minifb",
 ]
