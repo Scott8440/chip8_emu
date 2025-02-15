@@ -15,7 +15,8 @@ const SCREEN_HEIGHT: usize = 32;
 const FRAMERATE: u32 = 120;
 const CYCLES_PER_FRAME: u32 = 1000;
 
-const GLITCH_8XY6: bool = true;
+const SHIFT_GLITCH: bool = true;
+const DRAW_GLITCH: bool = true;
 
 /*
    Notes on Sprites:
@@ -93,7 +94,8 @@ impl<D: Display> CPU<D> {
                 self.keys[i] = if self.display.is_key_down(i) { 1 } else { 0 };
             }
 
-            if !self.cycle() {
+            let time_since_frame = last_timer_update.elapsed();
+            if !self.cycle(time_since_frame.as_micros(), frame_time.as_micros()) {
                 break;
             }
 
@@ -158,7 +160,7 @@ impl<D: Display> CPU<D> {
         }
     }
 
-    pub fn cycle(&mut self) -> bool {
+    pub fn cycle(&mut self, time_since_frame: u128, frame_time: u128) -> bool {
         self.opcode = (self.memory[self.pc as usize] as u16) << 8
             | (self.memory[self.pc as usize + 1] as u16);
         let opcode = self.opcode;
@@ -280,12 +282,15 @@ impl<D: Display> CPU<D> {
                 0x6 => {
                     // Store vy >> 1 in vx. Set vf to LSB of vy before shift
                     // println!("8XY6");
-                    self.v[0xF] = self.v[op_y] & 0x1;
-                    // self.v[x] = self.v[y] >> 1;
-                    self.v[op_x] >>= 1;
-                    // if GLITCH_8XY6 {
-                    //     self.v[y] = self.v[x];
-                    // }
+                    if SHIFT_GLITCH {
+                        let bit = self.v[op_y] & 0x1;
+                        self.v[op_x] = self.v[op_y] >> 1;
+                        self.v[0xF] = bit;
+                    } else {
+                        let bit = self.v[op_x] & 0x1;
+                        self.v[op_x] >>= 1;
+                        self.v[0xF] = bit;
+                    }
                 }
                 0x7 => {
                     // Set vX = Vy - Vx, set VF to !borrowed
@@ -297,11 +302,15 @@ impl<D: Display> CPU<D> {
                 0xE => {
                     // Store vy << 1 in vx. Set vf to most significant bit of vy before shift.
                     // println!("8XYE");
-                    // self.v[0xF] = self.v[op_y] >> 7;
-                    self.v[0xF] = (self.v[op_x] & 0b10000000) >> 7;
-                    // self.v[op_x] = self.v[op_x] << 1
-                    self.v[op_x] <<= 1;
-                    // self.v[op_y] = self.v[op_x];
+                    if SHIFT_GLITCH {
+                        let bit = (self.v[op_y] & 0b10000000) >> 7;
+                        self.v[op_x] = self.v[op_y] << 1;
+                        self.v[0xF] = bit;
+                    } else {
+                        let bit = (self.v[op_x] & 0b10000000) >> 7;
+                        self.v[op_x] <<= 1;
+                        self.v[0xF] = bit;
+                    }
                 }
                 _ => {
                     println!("Unknown opcode: 0x{:x}", opcode);
@@ -344,6 +353,12 @@ impl<D: Display> CPU<D> {
                 // * Set VF to 1 if any set pixels are changed to unset, else 0
                 // * To be visible on the screen, the vX register must be
                 //      between 00 and 3F. vY must be between 00 and 1F
+                if DRAW_GLITCH {
+                    if time_since_frame > (frame_time / 30) {
+                        self.pc -= 2;
+                        return true;
+                    }
+                }
                 let mut x = self.v[op_x] as usize;
                 let mut y = self.v[op_y] as usize;
                 let n = (opcode & 0x000F) as usize;
