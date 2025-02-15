@@ -84,6 +84,7 @@ impl Display for MiniFBDisplay {
 pub struct NullDisplay;
 
 impl NullDisplay {
+    #[allow(dead_code)]
     pub fn new() -> Self {
         NullDisplay
     }
@@ -94,7 +95,7 @@ impl Display for NullDisplay {
     fn is_open(&self) -> bool {
         true
     }
-    fn is_key_down(&self, key: usize) -> bool {
+    fn is_key_down(&self, _key: usize) -> bool {
         false
     }
 }
