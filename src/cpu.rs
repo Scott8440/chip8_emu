@@ -12,7 +12,8 @@ const FONTSET_START: usize = 0x50;
 const SCREEN_WIDTH: usize = 64;
 const SCREEN_HEIGHT: usize = 32;
 
-const FRAMERATE: u32 = 60;
+const FRAMERATE: u32 = 120;
+const CYCLES_PER_FRAME: u32 = 1000;
 
 /*
    Notes on Sprites:
@@ -74,10 +75,15 @@ impl<D: Display> CPU<D> {
 
     pub fn run(&mut self) {
         let frame_time = std::time::Duration::from_micros((1_000_000 / FRAMERATE).into());
+        let cycle_time = std::time::Duration::from_micros((1_000_000 / (FRAMERATE * CYCLES_PER_FRAME)).into());
+        // println!("Frame time: {}us", frame_time.as_micros());
+        // println!("Cycle time: {}us", cycle_time.as_micros());
         let mut last_timer_update = std::time::Instant::now();
 
+        let mut num_cycles = 0;
         while self.display.is_open() {
             let cycle_start = std::time::Instant::now();
+            num_cycles += 1;
 
             // Update keys
             for i in 0..16 {
@@ -88,11 +94,13 @@ impl<D: Display> CPU<D> {
                 break;
             }
 
-            // Update display
-            self.display.update(&self.gfx, SCREEN_WIDTH, SCREEN_HEIGHT);
 
             // Update timers at 60Hz
             if last_timer_update.elapsed() >= frame_time {
+                // Update display
+                self.display.update(&self.gfx, SCREEN_WIDTH, SCREEN_HEIGHT);
+                println!("frame: {} cycles", num_cycles);
+                num_cycles = 0;
                 if self.delay_timer > 0 {
                     self.delay_timer -= 1;
                 }
@@ -102,8 +110,9 @@ impl<D: Display> CPU<D> {
                 last_timer_update = std::time::Instant::now();
             }
 
-            // Sleep for remaining frame time
-            if let Some(sleep_time) = frame_time.checked_sub(cycle_start.elapsed()) {
+            // Sleep for remaining cycle time
+            if let Some(sleep_time) = cycle_time.checked_sub(cycle_start.elapsed()) {
+                println!("Sleeping for {}us", sleep_time.as_micros());
                 std::thread::sleep(sleep_time);
             }
         }
@@ -240,18 +249,21 @@ impl<D: Display> CPU<D> {
                     // println!("8XY1");
                     self.v[(opcode & 0x0F00) as usize >> 8] |=
                         self.v[(opcode & 0x00F0) as usize >> 4];
+                    self.v[0xF] = 0;
                 }
                 0x2 => {
                     // store VY & VX in VX
                     // println!("8XY2");
                     self.v[(opcode & 0x0F00) as usize >> 8] &=
                         self.v[(opcode & 0x00F0) as usize >> 4];
+                    self.v[0xF] = 0;
                 }
                 0x3 => {
                     // store VY xor VX in VX
                     // println!("8XY3");
                     self.v[(opcode & 0x0F00) as usize >> 8] ^=
                         self.v[(opcode & 0x00F0) as usize >> 4];
+                    self.v[0xF] = 0;
                 }
                 0x4 => {
                     // Add VY to VX
@@ -342,13 +354,19 @@ impl<D: Display> CPU<D> {
                 // * Set VF to 1 if any set pixels are changed to unset, else 0
                 // * To be visible on the screen, the vX register must be
                 //      between 00 and 3F. vY must be between 00 and 1F
-                let x = self.v[(opcode & 0x0F00) as usize >> 8] as usize;
-                let y = self.v[(opcode & 0x00F0) as usize >> 4] as usize;
+                let mut x = self.v[(opcode & 0x0F00) as usize >> 8] as usize;
+                let mut y = self.v[(opcode & 0x00F0) as usize >> 4] as usize;
                 let n = (opcode & 0x000F) as usize;
                 let addr = self.i as usize;
-                if y >= SCREEN_HEIGHT || x >= SCREEN_WIDTH {
-                    return true;
+                if y >= SCREEN_HEIGHT {
+                    y = y % SCREEN_HEIGHT;
                 }
+                if x >= SCREEN_WIDTH {
+                    x = x % SCREEN_WIDTH;
+                }
+                // if y >= SCREEN_HEIGHT || x >= SCREEN_WIDTH {
+                //     return true;
+                // }
                 let mut height = n;
                 if y + height > SCREEN_HEIGHT {
                     height = SCREEN_HEIGHT - y;
@@ -459,6 +477,7 @@ impl<D: Display> CPU<D> {
                     for i in 0..=x {
                         self.memory[(self.i + i as u16) as usize] = self.v[i];
                     }
+                    self.i += (x + 1) as u16;
                 }
                 0x65 => {
                     // Load v0 to vX from memory starting at I
@@ -467,6 +486,7 @@ impl<D: Display> CPU<D> {
                     for i in 0..=x {
                         self.v[i] = self.memory[(self.i + i as u16) as usize];
                     }
+                    self.i += (x + 1) as u16;
                 }
                 _ => {
                     println!("Unknown opcode: 0x{:x}", opcode);
