@@ -82,11 +82,9 @@ impl<D: Display> CPU<D> {
             std::time::Duration::from_micros((1_000_000 / (FRAMERATE * CYCLES_PER_FRAME)).into());
         let mut last_timer_update = std::time::Instant::now();
 
-        let mut num_cycles = 0;
         while self.display.is_open() {
             let cycle_start = std::time::Instant::now();
             let time_since_frame = last_timer_update.elapsed();
-            num_cycles += 1;
 
             // Update keys
             for i in 0..16 {
@@ -101,7 +99,6 @@ impl<D: Display> CPU<D> {
             if time_since_frame >= frame_time {
                 // Update display
                 self.display.update(&self.gfx, SCREEN_WIDTH, SCREEN_HEIGHT);
-                num_cycles = 0;
                 if self.delay_timer > 0 {
                     self.delay_timer -= 1;
                 }
