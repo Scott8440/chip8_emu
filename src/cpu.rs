@@ -12,8 +12,8 @@ const FONTSET_START: usize = 0x50;
 const SCREEN_WIDTH: usize = 64;
 const SCREEN_HEIGHT: usize = 32;
 
-const FRAMERATE: u32 = 120;
-const CYCLES_PER_FRAME: u32 = 1000;
+const FRAMERATE: u32 = 60;
+const CYCLES_PER_FRAME: u32 = 11;
 
 const SHIFT_GLITCH: bool = true;
 const DRAW_GLITCH: bool = true;
@@ -80,13 +80,12 @@ impl<D: Display> CPU<D> {
         let frame_time = std::time::Duration::from_micros((1_000_000 / FRAMERATE).into());
         let cycle_time =
             std::time::Duration::from_micros((1_000_000 / (FRAMERATE * CYCLES_PER_FRAME)).into());
-        // println!("Frame time: {}us", frame_time.as_micros());
-        // println!("Cycle time: {}us", cycle_time.as_micros());
         let mut last_timer_update = std::time::Instant::now();
 
         let mut num_cycles = 0;
         while self.display.is_open() {
             let cycle_start = std::time::Instant::now();
+            let time_since_frame = last_timer_update.elapsed();
             num_cycles += 1;
 
             // Update keys
@@ -94,16 +93,14 @@ impl<D: Display> CPU<D> {
                 self.keys[i] = if self.display.is_key_down(i) { 1 } else { 0 };
             }
 
-            let time_since_frame = last_timer_update.elapsed();
             if !self.cycle(time_since_frame.as_micros(), frame_time.as_micros()) {
                 break;
             }
 
             // Update timers at 60Hz
-            if last_timer_update.elapsed() >= frame_time {
+            if time_since_frame >= frame_time {
                 // Update display
                 self.display.update(&self.gfx, SCREEN_WIDTH, SCREEN_HEIGHT);
-                println!("frame: {} cycles", num_cycles);
                 num_cycles = 0;
                 if self.delay_timer > 0 {
                     self.delay_timer -= 1;
@@ -116,7 +113,6 @@ impl<D: Display> CPU<D> {
 
             // Sleep for remaining cycle time
             if let Some(sleep_time) = cycle_time.checked_sub(cycle_start.elapsed()) {
-                println!("Sleeping for {}us", sleep_time.as_micros());
                 std::thread::sleep(sleep_time);
             }
         }
@@ -165,7 +161,6 @@ impl<D: Display> CPU<D> {
             | (self.memory[self.pc as usize + 1] as u16);
         let opcode = self.opcode;
         self.pc += 2;
-        // println!("\npc: 0x{:x}, opcode: 0x{:x}", self.pc, opcode);
 
         let op_x = (opcode & 0x0F00) as usize >> 8;
         let op_y = (opcode & 0x00F0) as usize >> 4;
